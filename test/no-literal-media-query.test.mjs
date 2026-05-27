@@ -50,6 +50,26 @@ tester.run('no-literal-media-query', rule, {
       code: `const m = window.matchMedia('print');`,
       filename: 'comp.tsx',
     },
+    // plain object (not a style/css context) — not flagged
+    {
+      code: `const o = { '@media (min-width: 600px)': 1 };`,
+      filename: 'comp.tsx',
+    },
+    // css object with no @media key — not flagged
+    {
+      code: `const C = () => <div css={{ color: 'red' }} />;`,
+      filename: 'comp.tsx',
+    },
+    // computed key in css object — must not crash or flag
+    {
+      code: `const C = () => <div css={{ [bp]: { color: 'red' } }} />;`,
+      filename: 'comp.tsx',
+    },
+    // @media inside a CSS block comment — must not flag
+    {
+      code: `const S = styled.div\`/* @media (min-width: 600px) */ color: red;\`;`,
+      filename: 'comp.tsx',
+    },
   ],
 
   invalid: [
@@ -74,6 +94,18 @@ tester.run('no-literal-media-query', rule, {
     // matchMedia with breakpoint literal
     {
       code: `const m = matchMedia('(max-width: 480px)');`,
+      filename: 'comp.tsx',
+      errors: [{ messageId: 'noLiteralMediaQuery' }],
+    },
+    // @media key in JSX css={} object
+    {
+      code: `const C = () => <div css={{ '@media (min-width: 600px)': { color: 'red' } }} />;`,
+      filename: 'comp.tsx',
+      errors: [{ messageId: 'noLiteralMediaQuery' }],
+    },
+    // @media key in styled.div({}) object-css call
+    {
+      code: `const S = styled.div({ '@media screen and (max-width: 480px)': { display: 'none' } });`,
       filename: 'comp.tsx',
       errors: [{ messageId: 'noLiteralMediaQuery' }],
     },

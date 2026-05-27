@@ -20,6 +20,7 @@ export default [
       'fuselage-craft-gate/no-raw-color': 'error',
       'fuselage-craft-gate/no-literal-dimension': 'error',
       'fuselage-craft-gate/no-literal-shadow': 'error',
+      'fuselage-craft-gate/no-literal-media-query': 'error',
       'fuselage-craft-gate/require-field-wrapper': 'warn',
       'fuselage-craft-gate/prefer-box': 'warn',
       // valid-color-token needs the live palette — leave off here, run it via fuselage-gate
@@ -36,7 +37,7 @@ export default [
 | `no-raw-color` | error | Hex / rgb / rgba / hsl literals in JSX color attrs, `style={{}}`, `css` / `styled` templates |
 | `no-literal-dimension` | error | Literal px / rem in style/css/styled — spacing, sizing, `borderRadius`, `fontSize`/`fontWeight`/`lineHeight`, `gap` |
 | `no-literal-shadow` | error | Literal `boxShadow` / `box-shadow` values |
-| `no-literal-media-query` | error | Literal `@media` queries in css/styled templates and `matchMedia()` breakpoint string literals |
+| `no-literal-media-query` | error | Literal `@media` queries in css/styled templates, `@media` string keys in emotion object-css (`css={{…}}`, `styled.x({…})`), and `matchMedia()` breakpoint string literals |
 | `require-field-wrapper` | warn | Input controls not inside a `<Field>` ancestor |
 | `prefer-box` | warn | Raw DOM elements (`div`, `span`, …) with inline `style={{}}` |
 | `valid-color-token` | error | Invalid / double-prefixed Fuselage color token names — **needs the live palette via [`fuselage-gate`](cli.md)** |

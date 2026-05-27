@@ -7,9 +7,24 @@
  * Zero hardcoded Fuselage values — bans the literal pattern, not specific breakpoint values.
  */
 
-function isInsideCssTaggedTemplate(node) {
+/**
+ * Returns true when `node` is inside a JSX `css` or `style` attribute, a
+ * css/styled tagged template, or an emotion/styled object-css call expression
+ * (e.g. `css({…})`, `styled.div({…})`, `styled(Tag)({…})`).
+ */
+function isInsideStyleContext(node) {
   let current = node.parent;
   while (current) {
+    // JSX css={…} or style={…} attribute
+    if (
+      current.type === 'JSXAttribute' &&
+      current.name &&
+      (current.name.name === 'css' || current.name.name === 'style')
+    ) {
+      return true;
+    }
+
+    // css/styled tagged template
     if (current.type === 'TaggedTemplateExpression') {
       const { tag } = current;
       if (
@@ -29,10 +44,36 @@ function isInsideCssTaggedTemplate(node) {
         return true;
       }
     }
+
+    // Emotion object-css call: css({…}), styled.div({…}), styled(Tag)({…})
+    if (current.type === 'CallExpression') {
+      const { callee } = current;
+      if (
+        // css({…})
+        (callee.type === 'Identifier' && callee.name === 'css') ||
+        // styled.div({…})
+        (callee.type === 'MemberExpression' &&
+          callee.object &&
+          callee.object.name === 'styled') ||
+        // styled(Tag)({…})
+        (callee.type === 'CallExpression' &&
+          callee.callee &&
+          callee.callee.name === 'styled') ||
+        (callee.type === 'CallExpression' &&
+          callee.callee &&
+          callee.callee.type === 'MemberExpression' &&
+          callee.callee.object &&
+          callee.callee.object.name === 'styled')
+      ) {
+        return true;
+      }
+    }
+
     current = current.parent;
   }
   return false;
 }
+
 
 const MEDIA_QUERY_RE = /@media\b/i;
 
@@ -62,8 +103,9 @@ export default {
       TemplateElement(node) {
         const raw = node.value && node.value.raw;
         if (!raw) return;
-        if (!isInsideCssTaggedTemplate(node)) return;
-        if (MEDIA_QUERY_RE.test(raw)) {
+        if (!isInsideStyleContext(node)) return;
+        // Strip block comments before testing so `/* @media … */` is not flagged.
+        if (MEDIA_QUERY_RE.test(raw.replace(/\/\*[\s\S]*?\*\//g, ''))) {
           context.report({ node, messageId: 'noLiteralMediaQuery' });
         }
       },
@@ -91,6 +133,18 @@ export default {
         if (MATCH_MEDIA_ARG_RE.test(firstArg.value)) {
           context.report({ node: firstArg, messageId: 'noLiteralMediaQuery' });
         }
+      },
+
+      // '@media …' used as an object property key inside a style/css context:
+      //   css={{ '@media (min-width: 600px)': { … } }}
+      //   styled.div({ '@media screen and (max-width: 480px)': { … } })
+      Property(node) {
+        // Only flag string Literal keys (not computed keys, identifiers, etc.)
+        if (!node.key || node.key.type !== 'Literal') return;
+        if (typeof node.key.value !== 'string') return;
+        if (!MEDIA_QUERY_RE.test(node.key.value)) return;
+        if (!isInsideStyleContext(node)) return;
+        context.report({ node: node.key, messageId: 'noLiteralMediaQuery' });
       },
     };
   },
