@@ -42,13 +42,20 @@ target (inclusive). These are the MINOR versions that define the ladder steps. I
 line, minors carry breaking changes; patches within a minor are safe to skip.
 
 Note: Fuselage packages are NOT co-versioned. `@rocket.chat/fuselage-hooks`,
-`@rocket.chat/fuselage-tokens`, and related packages have independent version lines. At each
-hop, resolve the correct peer versions for that hop's `@rocket.chat/fuselage` by reading the
-target version's `peerDependencies` from the registry — do not assume matching numbers.
+`@rocket.chat/fuselage-tokens`, `@rocket.chat/css`, `@rocket.chat/icons`,
+`@rocket.chat/fuselage-toastbar`, and any other installed `@rocket.chat/fuselage*` or companion
+packages have independent version lines.
 
-```sh
-npm view @rocket.chat/fuselage@<target-version> peerDependencies
-```
+**Do NOT use `peerDependencies` to pick companion versions.** Fuselage declares all companions
+as `"*"` — a wildcard that encodes no version contract whatsoever. Reading peerDeps from the
+registry will not tell you which companion version is compatible; it will only tell you "any
+version", which is wrong guidance.
+
+Instead, **co-bump all companions alongside core fuselage**: for each hop, set every companion
+to the version published contemporaneously with the target fuselage release (i.e. the latest
+stable of each companion at the time that fuselage version was released), or to the current
+latest stable if no contemporaneous pinning is available. The safest default is latest stable
+for all companions at the time of the bump.
 
 ## Adaptive stride loop
 
@@ -63,8 +70,14 @@ fuselage-resolve all --json > before.json
 
 ### 2. Bump
 
-Update `@rocket.chat/fuselage` in `package.json` to `current + stride`. Resolve peer package
-versions from the target's `peerDependencies`; update those entries too. Then:
+Update `@rocket.chat/fuselage` in `package.json` to `current + stride`. Co-bump all companion
+packages (`@rocket.chat/fuselage-hooks`, `@rocket.chat/css`, `@rocket.chat/icons`,
+`@rocket.chat/fuselage-tokens`, `@rocket.chat/fuselage-toastbar`, and any other
+`@rocket.chat/fuselage*` / companion in the project's dependencies) to versions published
+contemporaneously with the target, or to their current latest stable. **Do not read
+`peerDependencies` to pick companion versions — they are wildcards (`"*"`) and carry no version
+contract.** Treat npm/yarn peer-dependency install warnings as signal, not noise — they can
+indicate a genuine companion mismatch.
 
 ```sh
 npm install
@@ -72,6 +85,19 @@ npm install
 
 If `npm install` exits with a peer-dependency conflict that cannot be resolved cleanly, treat
 this the same as an error storm (see step 5 below): roll back and halve the stride.
+
+### 2a. Check companion symbol compatibility
+
+```sh
+fuselage-resolve check-companions
+```
+
+This reconciles the installed fuselage's companion imports against the installed companions'
+exports. If it reports any missing symbol (a symbol fuselage's own code imports from a
+companion that the companion's installed version does not export), **this hop is BLOCKED**:
+bump the named companion(s) to a version that exports the symbol, reinstall, and re-run
+`check-companions` until it exits zero before proceeding. A missing companion symbol causes a
+runtime crash that the type gate cannot see because consumers run with `skipLibCheck`.
 
 ### 3. Snapshot vocabulary after the bump and diff
 
@@ -156,6 +182,15 @@ Be explicit and honest here. The type gate turns GREEN and lint passes GREEN whe
 - A component keeps its prop but its default value or render behavior changes.
 - A visual composition that was correct at the old version looks wrong at the new one.
 
+- **Cross-package runtime symbols.** Fuselage's own source code calls exports from companion
+  packages (`@rocket.chat/fuselage-hooks`, `@rocket.chat/css`, etc.). If the installed companion
+  is older than fuselage expects, a symbol fuselage calls may be missing — causing a runtime
+  crash. The type gate is blind to this because consumers compile with `skipLibCheck`, so
+  companion `.d.ts` files are not checked. `fuselage-resolve check-companions` catches the
+  statically-visible cases (symbols resolvable from `.d.ts`), but runtime-only imports not
+  reflected in type declarations can still slip through. **A runtime launch is mandatory** — no
+  static analysis substitutes for it.
+
 These are **behavioral breaks** that require human review. For each hop, extract the
 changelog's BREAKING and behavioral-change notes into a checklist and hand it to the user:
 
@@ -172,16 +207,23 @@ surfaces) for hops with behavioral notes. Do not claim the gate covers behavior.
 
 The upgrade is complete when:
 
-- `fuselage-gate 'src/**/*.{ts,tsx}'` exits zero on the target version (type + lint clean).
+- `fuselage-gate 'src/**/*.{ts,tsx}'` exits zero on the target version (type + lint + companion
+  reconciliation clean).
+- `fuselage-resolve check-companions` exits zero on the target install.
 - Every hop from start to target exists as a `git commit` checkpoint in the branch history.
 - The behavioral-flag checklist covering all changelog BREAKING and behavioral notes across
   the full hop range has been handed to the user for review.
+- **The app has been launched (or the affected components mounted) and confirmed crash-free at
+  runtime.** The type gate and `check-companions` prove static correctness; they cannot prove
+  that fuselage's internal runtime calls into companions all resolve at execution time. A green
+  gate is necessary, not sufficient. Only running the app provides that proof.
 
 ## Output
 
-Per hop: the resolver diff (removed / added vocabulary), the gate result (error count or
-"clean"), and the git checkpoint commit. At completion: the full behavioral-flag checklist for
-the user.
+Per hop: the resolver diff (removed / added vocabulary), the `check-companions` result (missing
+symbols or "clean"), the gate result (error count or "clean"), and the git checkpoint commit.
+At completion: the full behavioral-flag checklist for the user, plus confirmation that a runtime
+launch completed without crash.
 
 ## Close with the gate
 

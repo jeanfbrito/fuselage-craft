@@ -65,7 +65,7 @@ fontScale, or component name into this repo's logic or output.
 | `adapters/claude-code/` | The skill — `SKILL.md` (laws + router), `reference/` (per-command flows) |
 | `src/resolve.mjs` | Live resolver — token/component/hook introspection via TS types |
 | `src/eslint-plugin/` | Seven value-free lint rules + `index.mjs` |
-| `src/run-gate.mjs` | Gate driver — injects the live palette into `valid-color-token` |
+| `src/run-gate.mjs` | Gate driver — injects the live palette into `valid-color-token`; runs lint, type, and companion checks |
 | `src/typecheck.mjs` | `tsc --noEmit` wrapper against the consumer tsconfig |
 | `bin/` | `fuselage-resolve`, `fuselage-gate` CLIs |
 | `docs/` | Engine reference — `cli.md`, `eslint-plugin.md` |
@@ -75,7 +75,8 @@ fontScale, or component name into this repo's logic or output.
 
 ```sh
 node test/run-tests.mjs                                   # rule suites (must be green)
-cd fixtures/consumer && node ../../bin/fuselage-resolve.mjs all   # resolver vs real Fuselage
-cd fixtures/consumer && node ../../bin/fuselage-gate.mjs 'src/good.tsx'  # PASS
-cd fixtures/consumer && node ../../bin/fuselage-gate.mjs 'src/bad.tsx'   # FAIL (gate catches drift)
+cd fixtures/consumer && node ../../bin/fuselage-resolve.mjs all              # resolver vs real Fuselage
+cd fixtures/consumer && node ../../bin/fuselage-resolve.mjs check-companions # companion imports vs installed exports
+cd fixtures/consumer && node ../../bin/fuselage-gate.mjs 'src/good.tsx'     # PASS
+cd fixtures/consumer && node ../../bin/fuselage-gate.mjs 'src/bad.tsx'      # FAIL (gate catches drift)
 ```

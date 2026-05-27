@@ -27,6 +27,32 @@ fuselage-resolve inputs
 A category that can't be resolved reports `unavailable` rather than guessing — the type gate
 still enforces correctness, so the failure mode is safe.
 
+## `fuselage-resolve check-companions`
+
+Reconciles the installed `@rocket.chat/fuselage`'s companion imports against the installed
+companions' exported symbols. Specifically: it reads what fuselage's own source imports from
+each companion package (`@rocket.chat/fuselage-hooks`, `@rocket.chat/css`,
+`@rocket.chat/icons`, `@rocket.chat/fuselage-tokens`, etc.), and verifies those symbols are
+present in the companion's installed `.d.ts`. Any symbol fuselage imports but the companion
+does not export is reported as a missing symbol and the command exits nonzero.
+
+This matters because consumers compile with `skipLibCheck`, so companion type files are not
+checked during `tsc --noEmit` — a stale companion can export nothing of what fuselage calls and
+the type gate stays green right up until runtime crashes. `check-companions` catches the
+statically-visible cases before the app runs.
+
+Note: `peerDependencies` cannot be used to select companion versions — fuselage declares all
+companions as `"*"` (wildcard), which encodes no version contract. Version selection must be
+done by co-bumping companions to releases published contemporaneously with the target fuselage
+version.
+
+```sh
+fuselage-resolve check-companions
+```
+
+Exits zero when all companion symbols resolve. Exits nonzero and reports the missing symbols
+and their source companions when any symbol is absent.
+
 ## `fuselage-resolve diff <old.json> <new.json>`
 
 Diffs two `fuselage-resolve --json` snapshots to surface what Fuselage vocabulary
@@ -69,8 +95,10 @@ diff.
 
 ## `fuselage-gate [globs]`
 
-Runs the lint rules **and** `tsc --noEmit` against your installed Fuselage types. A change is
-not done until both pass; exits nonzero if lint errors > 0 OR tsc fails.
+Runs three checks in sequence: **lint rules**, **`tsc --noEmit`** against your installed
+Fuselage types, and **companion reconciliation** (`fuselage-resolve check-companions`). Exits
+nonzero if lint errors > 0, tsc fails, OR a companion symbol is missing. All three must pass
+for the gate to report clean.
 
 ```sh
 fuselage-gate 'src/**/*.tsx'
