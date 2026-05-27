@@ -133,6 +133,10 @@ a copy:
   it typechecks.
 - **Lint gate.** Catches what types can't: raw hex, literal px, styled `<div>` over `<Box>`,
   inputs outside `<Field>`. Value-free rules — they ban patterns, not specific Fuselage values.
+- **Companion gate.** Reconciles the symbols fuselage's own bundle imports from companion
+  packages (`fuselage-hooks`, `css-in-js`, …) against each installed companion's exports —
+  catches a missing companion symbol (a runtime crash the type gate can't see under
+  `skipLibCheck`) before it ships. Mostly relevant after a version bump; see `upgrade`.
 
 You can also run the gate standalone (CI, pre-commit, non-agent workflows) — it doesn't need
 the skill. See **[docs/cli.md](docs/cli.md)** for `fuselage-resolve` / `fuselage-gate` /
