@@ -1112,7 +1112,7 @@ export async function resolveAll() {
 
 // ─── CLI entry point ──────────────────────────────────────────────────────────
 
-async function main() {
+export async function main() {
   const args = process.argv.slice(2);
   const jsonMode = args.includes('--json');
   const categoryArg = args.find((a) => !a.startsWith('--')) || 'all';

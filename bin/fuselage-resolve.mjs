@@ -10,4 +10,13 @@
  *             elevation, radius, components, forms, inputs, hooks, all (default)
  */
 
-import '../src/resolve.mjs';
+// Call main() explicitly. The npm .bin is named `fuselage-resolve` (no .mjs),
+// so the module's own argv-name self-run guard does not fire when invoked via
+// the bin (npx local .bin, volta global shim). Calling main() works for every
+// invocation path.
+import { main } from '../src/resolve.mjs';
+
+main().catch((err) => {
+  process.stderr.write(`fuselage-resolve error: ${err?.stack ?? err}\n`);
+  process.exit(1);
+});
