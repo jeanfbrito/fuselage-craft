@@ -35,10 +35,10 @@ modules with no build step, so any of these work in your product repo:
 
 ```sh
 # from GitHub (default branch)
-npm i -D github:RocketChat/fuselage-craft
+npm i -D github:jeanfbrito/fuselage-craft
 
 # pin a branch or tag
-npm i -D github:RocketChat/fuselage-craft#main
+npm i -D github:jeanfbrito/fuselage-craft#main
 
 # once published to npm
 npm i -D fuselage-craft
@@ -56,7 +56,7 @@ npm 7+ installs missing peers automatically; otherwise add them yourself.
 For local development on the toolkit itself, clone and link instead:
 
 ```sh
-git clone https://github.com/RocketChat/fuselage-craft
+git clone https://github.com/jeanfbrito/fuselage-craft
 cd fuselage-craft && npm install && npm link
 # then, from your product repo:
 npm link fuselage-craft
