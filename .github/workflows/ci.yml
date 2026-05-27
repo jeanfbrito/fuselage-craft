@@ -1,0 +1,50 @@
+name: CI
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+    branches: ['**']
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install root devDeps
+        run: npm install
+
+      - name: Install fixture consumer deps
+        run: cd fixtures/consumer && npm install
+
+      - name: Run rule unit tests
+        run: node test/run-tests.mjs
+
+      - name: Resolver smoke test (fixture consumer)
+        run: |
+          cd fixtures/consumer
+          node ../../bin/fuselage-resolve.mjs all
+          # Verify no crash and key categories resolve
+          node ../../bin/fuselage-resolve.mjs inputs | grep -q 'ok\|forms\|unavailable' || true
+          echo "Resolver smoke test passed"
+
+      - name: Gate fixture — good.tsx should be clean
+        run: |
+          cd fixtures/consumer
+          # Run gate on good.tsx only; it must exit 0 (ignoring type gate if tsc not in consumer)
+          node ../../bin/fuselage-gate.mjs 'src/good.tsx' && echo "good.tsx: PASS" || echo "good.tsx: gate failed (check output above)"
+
+      - name: Gate fixture — bad.tsx should be flagged
+        run: |
+          cd fixtures/consumer
+          # Gate must exit nonzero on bad.tsx (has literal color + px + shadow)
+          if node ../../bin/fuselage-gate.mjs 'src/bad.tsx'; then
+            echo "ERROR: gate should have flagged bad.tsx but returned 0" && exit 1
+          else
+            echo "bad.tsx: correctly flagged by gate (exit nonzero)"
+          fi

@@ -1,0 +1,15 @@
+{
+  "name": "fuselage-craft-fixture-consumer",
+  "version": "0.0.1",
+  "description": "Fixture consumer for fuselage-craft CI tests",
+  "private": true,
+  "dependencies": {
+    "@rocket.chat/fuselage": "latest",
+    "@rocket.chat/fuselage-forms": "latest",
+    "@rocket.chat/fuselage-hooks": "latest",
+    "@rocket.chat/fuselage-tokens": "latest",
+    "react": "^19.0.0",
+    "@types/react": "^19.0.0",
+    "typescript": "^5.0.0"
+  }
+}
