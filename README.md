@@ -5,15 +5,12 @@ An **agent skill** for designing and refining UI in products that consume
 screen, a component, or a feature idea; it works in Fuselage components and token references,
 proves conformance with a hard gate, and refuses to invent design values.
 
-It is **not** for authoring Fuselage itself — that work lives in the Fuselage repo with its
-own tokens and components.
-
 > Today the skill ships as a Claude Code adapter ([`adapters/claude-code/`](adapters/claude-code/)).
 > The skill contract is agent-agnostic; more adapters can wrap the same engine.
 
 ## Prime directive: reference, never replicate
 
-**Fuselage is the source of truth. This skill holds no copy of it.**
+**Fuselage is the source of truth — resolved live from the installed package.**
 
 - No token snapshot, no manifest, no hardcoded value — not in the skill, not in the code it
   produces.
