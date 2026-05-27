@@ -25,7 +25,7 @@
 import { createRequire } from 'module';
 import { pathToFileURL, fileURLToPath } from 'url';
 import { readFileSync, existsSync } from 'fs';
-import { resolve as pathResolve, dirname, join } from 'path';
+import { dirname, join } from 'path';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -293,7 +293,7 @@ function extractUnionStringLiterals(ts, checker, symbol) {
  * e.g. export const surfaceColors = { 'surface-light': ..., ... }
  * Returns an array of string keys.
  */
-function extractObjectKeys(ts, checker, symbol) {
+function extractObjectKeys(checker, symbol) {
   const type = checker.getTypeOfSymbol(symbol);
   const props = checker.getPropertiesOfType(type);
   const keys = props.map((p) => p.getName());
@@ -316,7 +316,7 @@ function extractElevationLiterals(ts, checker, exports) {
       const elevProp = type.getProperty('elevation');
       if (elevProp) {
         const elevType = checker.getTypeOfSymbol(elevProp);
-        const literals = extractUnionFromType(ts, elevType);
+        const literals = extractUnionFromType(elevType);
         if (literals && literals.length > 0) return literals;
       }
     }
@@ -332,7 +332,7 @@ function extractElevationLiterals(ts, checker, exports) {
       const elevProp = type.getProperty('elevation');
       if (!elevProp) continue;
       const elevType = checker.getTypeOfSymbol(elevProp);
-      const literals = extractUnionFromType(ts, elevType);
+      const literals = extractUnionFromType(elevType);
       if (literals && literals.length > 0) return literals;
     }
   }
@@ -343,7 +343,7 @@ function extractElevationLiterals(ts, checker, exports) {
 /**
  * Extract string literal union values from a type (handles union + single).
  */
-function extractUnionFromType(ts, type) {
+function extractUnionFromType(type) {
   if (type.isUnion()) {
     const lits = [];
     for (const t of type.types) {
@@ -612,7 +612,7 @@ async function resolveSemantic() {
     for (const [exportName, groupKey] of subObjectMap) {
       const sym = exports.find((s) => s.getName() === exportName);
       if (!sym) continue;
-      const keys = extractObjectKeys(ts, checker, sym);
+      const keys = extractObjectKeys(checker, sym);
       if (keys.length > 0) rawGroups[groupKey] = keys;
     }
 
@@ -1110,12 +1110,212 @@ export async function resolveAll() {
   return { root: anchor, resolvedFrom, fuselageInstalled: installed, versions, categories };
 }
 
+// ─── Vocabulary diff ──────────────────────────────────────────────────────────
+
+/**
+ * Diff two resolveAll()-shaped snapshots.
+ * Returns: { versions, categories: { [cat]: { removed, added } }, skipped: { [cat]: reason } }
+ *
+ * VALUE-FREE: operates only on resolver output, never hardcodes any Fuselage name or value.
+ */
+export function resolveDiff(oldAll, newAll) {
+  const allCats = new Set([
+    ...Object.keys(oldAll.categories ?? {}),
+    ...Object.keys(newAll.categories ?? {}),
+  ]);
+
+  const categories = {};
+  const skipped = {};
+
+  for (const cat of allCats) {
+    const oldCat = oldAll.categories?.[cat];
+    const newCat = newAll.categories?.[cat];
+
+    const oldOk = oldCat?.status === 'ok';
+    const newOk = newCat?.status === 'ok';
+    const oldMissing = oldCat === undefined;
+    const newMissing = newCat === undefined;
+
+    // If both sides are missing, skip
+    if (oldMissing && newMissing) {
+      skipped[cat] = 'missing on both sides';
+      continue;
+    }
+
+    // If one side is missing but other is ok array/semantic → treat missing as empty
+    // If present side is not ok → skip
+    if (!oldMissing && !oldOk && !newMissing && !newOk) {
+      skipped[cat] = 'old ' + oldCat.status + ', new ' + newCat.status;
+      continue;
+    }
+    if (!oldMissing && !oldOk && newMissing) {
+      skipped[cat] = 'old ' + oldCat.status;
+      continue;
+    }
+    if (oldMissing && !newMissing && !newOk) {
+      skipped[cat] = 'new ' + newCat.status;
+      continue;
+    }
+
+    // Flatten to string sets for set-diff
+    function flattenToStrings(catResult, isMissing) {
+      if (isMissing) return [];
+      if (catResult?.status !== 'ok') return null; // not ok
+      const data = catResult.data;
+      if (!Array.isArray(data)) return null; // not an array at all
+      // Check if it looks like semantic: array of { groupName, keys }
+      if (data.length > 0 && typeof data[0] === 'object' && data[0] !== null && 'groupName' in data[0] && 'keys' in data[0]) {
+        // Semantic group shape — validate ALL groups before flattening.
+        // If any group is malformed, return null so the category is recorded
+        // in skipped rather than crashing with TypeError.
+        for (const group of data) {
+          if (
+            group === null ||
+            typeof group !== 'object' ||
+            typeof group.groupName !== 'string' ||
+            !Array.isArray(group.keys)
+          ) {
+            return null;
+          }
+        }
+        const result = [];
+        for (const group of data) {
+          for (const key of group.keys) {
+            result.push(group.groupName + '/' + key);
+          }
+        }
+        return result;
+      }
+      // Plain string array
+      if (data.every((d) => typeof d === 'string')) {
+        return data;
+      }
+      return null; // not comparable
+    }
+
+    const oldStrings = flattenToStrings(oldCat, oldMissing);
+    const newStrings = flattenToStrings(newCat, newMissing);
+
+    // If either side is not comparable data, skip
+    if (oldStrings === null) {
+      if (newStrings === null) {
+        skipped[cat] = 'data not comparable on either side';
+      } else {
+        skipped[cat] = 'old ' + (oldCat?.status ?? 'missing') + ' (data not comparable)';
+      }
+      continue;
+    }
+    if (newStrings === null) {
+      skipped[cat] = 'new ' + (newCat?.status ?? 'missing') + ' (data not comparable)';
+      continue;
+    }
+
+    const oldSet = new Set(oldStrings);
+    const newSet = new Set(newStrings);
+
+    const removed = [...oldSet].filter((s) => !newSet.has(s)).sort();
+    const added = [...newSet].filter((s) => !oldSet.has(s)).sort();
+
+    categories[cat] = { removed, added };
+  }
+
+  return {
+    versions: {
+      old: oldAll.versions,
+      new: newAll.versions,
+    },
+    categories,
+    skipped,
+  };
+}
+
 // ─── CLI entry point ──────────────────────────────────────────────────────────
 
 export async function main() {
   const args = process.argv.slice(2);
   const jsonMode = args.includes('--json');
   const categoryArg = args.find((a) => !a.startsWith('--')) || 'all';
+
+  // ── diff mode ──────────────────────────────────────────────────────────────
+  if (categoryArg === 'diff') {
+    const nonFlagArgs = args.filter((a) => !a.startsWith('--'));
+    const oldPath = nonFlagArgs[1];
+    const newPath = nonFlagArgs[2];
+
+    if (!oldPath || !newPath) {
+      process.stderr.write(
+        'Usage: fuselage-resolve diff <old.json> <new.json> [--json]\n',
+      );
+      process.exit(1);
+    }
+
+    let oldSnap, newSnap;
+    try {
+      oldSnap = JSON.parse(readFileSync(oldPath, 'utf8'));
+    } catch (err) {
+      process.stderr.write(`Error reading old snapshot "${oldPath}": ${err.message}\n`);
+      process.exit(1);
+    }
+    try {
+      newSnap = JSON.parse(readFileSync(newPath, 'utf8'));
+    } catch (err) {
+      process.stderr.write(`Error reading new snapshot "${newPath}": ${err.message}\n`);
+      process.exit(1);
+    }
+
+    function assertSnapshot(snap, filePath) {
+      if (
+        snap === null ||
+        typeof snap !== 'object' ||
+        snap.categories === null ||
+        typeof snap.categories !== 'object'
+      ) {
+        process.stderr.write(
+          `Error: "${filePath}" is not a fuselage-resolve snapshot (missing top-level "categories" object). ` +
+          `Produce one with: fuselage-resolve all --json > snap.json\n`,
+        );
+        process.exit(1);
+      }
+    }
+    assertSnapshot(oldSnap, oldPath);
+    assertSnapshot(newSnap, newPath);
+
+    const diff = resolveDiff(oldSnap, newSnap);
+
+    if (jsonMode) {
+      process.stdout.write(JSON.stringify(diff, null, 2) + '\n');
+      return;
+    }
+
+    const oldVer = oldSnap.versions?.['@rocket.chat/fuselage'] ?? 'unknown';
+    const newVer = newSnap.versions?.['@rocket.chat/fuselage'] ?? 'unknown';
+
+    process.stdout.write('═══ fuselage-craft vocab diff ════════════════════════\n');
+    process.stdout.write(`old: ${oldVer}  →  new: ${newVer}\n`);
+    process.stdout.write('──────────────────────────────────────────────────────\n');
+
+    for (const [cat, { removed, added }] of Object.entries(diff.categories)) {
+      process.stdout.write(`${cat}:\n`);
+      if (removed.length === 0 && added.length === 0) {
+        process.stdout.write(`  (no change)\n`);
+      } else {
+        if (removed.length > 0) {
+          process.stdout.write(`  removed:  ${removed.join(', ')}\n`);
+        }
+        if (added.length > 0) {
+          process.stdout.write(`  added:    ${added.join(', ')}\n`);
+        }
+      }
+    }
+
+    const skippedEntries = Object.entries(diff.skipped);
+    if (skippedEntries.length > 0) {
+      const skippedList = skippedEntries.map(([c, r]) => `${c} (${r})`).join(', ');
+      process.stdout.write(`skipped (not comparable): ${skippedList}\n`);
+    }
+
+    return;
+  }
 
   if (jsonMode) {
     const result =
@@ -1209,12 +1409,13 @@ export async function main() {
   }
 }
 
-// Run CLI only when invoked directly
+// Run CLI only when resolve.mjs itself is the entry point.
+// The bin (fuselage-resolve.mjs) calls main() explicitly, so this guard must
+// NOT match the bin path — otherwise main() fires twice and --json emits two objects.
 const isMain =
   process.argv[1] &&
   (process.argv[1] === __filename ||
-    process.argv[1].endsWith('/resolve.mjs') ||
-    process.argv[1].endsWith('/fuselage-resolve.mjs'));
+    process.argv[1].endsWith('/src/resolve.mjs'));
 
 if (isMain) {
   main().catch((err) => {

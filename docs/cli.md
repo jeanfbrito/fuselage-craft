@@ -27,6 +27,46 @@ fuselage-resolve inputs
 A category that can't be resolved reports `unavailable` rather than guessing — the type gate
 still enforces correctness, so the failure mode is safe.
 
+## `fuselage-resolve diff <old.json> <new.json>`
+
+Diffs two `fuselage-resolve --json` snapshots to surface what Fuselage vocabulary
+disappeared or appeared between versions — the breaking-change surface for an upgrade.
+
+Typical workflow:
+
+```sh
+# 1. Capture before upgrading
+fuselage-resolve all --json > before.json
+
+# 2. Bump @rocket.chat/fuselage in package.json, then:
+npm install
+
+# 3. Capture after
+fuselage-resolve all --json > after.json
+
+# 4. See what changed
+fuselage-resolve diff before.json after.json
+```
+
+The output groups changes by category (components, tokens, hooks, …):
+
+```
+═══ fuselage-craft vocab diff ════════════════════════
+old: 0.31.0  →  new: 0.32.0
+──────────────────────────────────────────────────────
+components:
+  removed:  Tile
+  added:    Chip
+semantic:
+  (no change)
+skipped (not comparable): spacing (old rule, new rule), radius (old rule, new rule)
+```
+
+Add `--json` after the paths to get a machine-readable object instead of human output.
+Categories that were not resolvable on either side are reported as `skipped` (not
+counted as changes) so noise from unavailable introspection paths does not pollute the
+diff.
+
 ## `fuselage-gate [globs]`
 
 Runs the lint rules **and** `tsc --noEmit` against your installed Fuselage types. A change is

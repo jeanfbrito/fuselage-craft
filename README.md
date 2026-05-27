@@ -45,6 +45,7 @@ it writes code) closes by running the gate.
 | `shape` | Build | Plan a feature as a Fuselage component composition tree | no | no |
 | `craft` | Build | Shape, confirm, then build the feature end to end under the laws | yes | yes |
 | `migrate` | Fix | Convert legacy / raw-CSS / hand-rolled UI into Fuselage + token refs (map by role, never by value) | yes | yes |
+| `upgrade` | Fix | Upgrade the installed Fuselage version across releases, fixing breaking changes hop-by-hop (type gate detects, resolver diff maps renames) | yes | yes |
 | `clarify` | Fix | Fix UX copy, labels, error and helper messages — words only, never values | yes | yes |
 | `adapt` | Fix | Make it responsive via `fuselage-hooks`, not media-query literals | yes | yes |
 | `polish` | Refine | Complete the states: loading, empty, error, hover, focus | yes | yes |

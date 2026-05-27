@@ -127,6 +127,7 @@ above. Setup (below) runs first either way.
 |---|---|---|---|
 | `audit` | Evaluate | Flagship. Run the type + lint gate against the installed package; report drift (literal values, reinvented components, missing `Field`, props that don't typecheck), then a judgment pass. | [reference/audit.md](reference/audit.md) |
 | `migrate` | Fix | Convert legacy raw-CSS / hex / hand-rolled UI into Fuselage components + token references. Map by role, never by copying the old value. | [reference/migrate.md](reference/migrate.md) |
+| `upgrade` | Fix | Upgrade the installed Fuselage version across releases, fixing breaking changes hop-by-hop with the gate as detector. | [reference/upgrade.md](reference/upgrade.md) |
 | `polish` | Refine | Final pass: loading (`Throbber`), errors (`Callout` / `FieldError`), empty states, focus, state completeness. No new literals. | [reference/polish.md](reference/polish.md) |
 | `harden` | Refine | Edge cases, i18n, RTL, error / disabled / loading paths, a11y, all through Fuselage. | [reference/harden.md](reference/harden.md) |
 | `critique` | Evaluate | UX heuristics (hierarchy, cognitive load, IA). No code change, no gate. | [reference/critique.md](reference/critique.md) |
