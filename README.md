@@ -30,24 +30,37 @@ consumer edit.
 
 ## Install
 
-Once published:
+No publish step is required — install straight from the repo. The toolkit is plain ES
+modules with no build step, so any of these work in your product repo:
 
 ```sh
+# from GitHub (default branch)
+npm i -D github:RocketChat/fuselage-craft
+
+# pin a branch or tag
+npm i -D github:RocketChat/fuselage-craft#main
+
+# once published to npm
 npm i -D fuselage-craft
 ```
 
-Until then, clone and link:
+This installs the `fuselage-resolve` and `fuselage-gate` bins and exposes the ESLint plugin
+at `fuselage-craft/eslint-plugin`. Run the bins from your product repo root (via
+`npx fuselage-gate …` or a package script) so the resolver can walk up to find
+`@rocket.chat/fuselage` in your `node_modules`.
+
+`eslint`, `typescript`, and `typescript-eslint` are **peer dependencies** — the toolkit uses
+the copies already installed in your project (so the gate runs against your exact versions).
+npm 7+ installs missing peers automatically; otherwise add them yourself.
+
+For local development on the toolkit itself, clone and link instead:
 
 ```sh
 git clone https://github.com/RocketChat/fuselage-craft
-cd fuselage-craft && npm install
-npm link                 # register the bins globally
+cd fuselage-craft && npm install && npm link
 # then, from your product repo:
 npm link fuselage-craft
 ```
-
-This puts `fuselage-resolve` and `fuselage-gate` on your PATH. Run them from your product repo
-root so the resolver can walk up to find `@rocket.chat/fuselage` in your `node_modules`.
 
 ## Usage
 
@@ -134,15 +147,35 @@ node /path/to/fuselage-craft/src/typecheck.mjs -p tsconfig.app.json
 
 ### Claude Code
 
-`adapters/claude-code/` exposes the toolkit as a Claude Code skill with design commands
-(`audit`, `migrate`, `polish`, `craft`, …) that call the CLIs under the hood. Install via
-symlink so the repo stays the source of truth:
+`adapters/claude-code/` exposes the toolkit as a Claude Code skill. Each command resolves
+vocabulary live and closes by running the gate — the adapter holds no Fuselage vocabulary of
+its own. Install via symlink so the repo stays the source of truth:
 
 ```sh
 ln -s /path/to/fuselage-craft/adapters/claude-code ~/.claude/skills/fuselage-craft
 ```
 
-See [`adapters/claude-code/README.md`](adapters/claude-code/README.md) for full usage.
+Invoke as `/fuselage-craft <command> <target>` from a product repo that consumes Fuselage:
+
+| Command | Category | What it does | Edits code | Runs gate |
+|---|---|---|:---:|:---:|
+| `audit` | Evaluate | Conformance scan: gate drift + a judgment pass | no | yes |
+| `critique` | Evaluate | UX heuristic review (hierarchy, load, IA) | no | no |
+| `shape` | Build | Plan the feature as a Fuselage component tree | no | no |
+| `craft` | Build | Shape, then build the feature end to end | yes | yes |
+| `migrate` | Fix | Convert legacy / raw-CSS UI to Fuselage + tokens | yes | yes |
+| `clarify` | Fix | Fix UX copy, labels, error messages | yes | yes |
+| `adapt` | Fix | Make it responsive via `fuselage-hooks` | yes | yes |
+| `polish` | Refine | Complete states: loading, empty, error, focus | yes | yes |
+| `harden` | Refine | Edge cases, i18n, RTL, a11y, error paths | yes | yes |
+
+```sh
+/fuselage-craft audit src/**
+/fuselage-craft migrate src/components/LegacyToolbar.tsx
+/fuselage-craft craft "invite-members dialog"
+```
+
+See [`adapters/claude-code/README.md`](adapters/claude-code/README.md) for the per-command flows.
 
 ## Keeping in sync with Fuselage
 

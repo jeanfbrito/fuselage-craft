@@ -3,6 +3,16 @@
   "version": "0.1.0",
   "description": "Conformance toolkit for products that consume @rocket.chat/fuselage. Live resolver + value-free ESLint rules + type gate.",
   "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/RocketChat/fuselage-craft.git"
+  },
+  "files": [
+    "src",
+    "bin",
+    "README.md",
+    "LICENSE"
+  ],
   "exports": {
     ".": "./src/resolve.mjs",
     "./eslint-plugin": "./src/eslint-plugin/index.mjs"
@@ -15,6 +25,16 @@
     "test": "node test/run-tests.mjs",
     "resolve": "node bin/fuselage-resolve.mjs",
     "gate": "node bin/fuselage-gate.mjs"
+  },
+  "peerDependencies": {
+    "eslint": ">=9",
+    "typescript": ">=5",
+    "typescript-eslint": ">=8"
+  },
+  "peerDependenciesMeta": {
+    "eslint": { "optional": false },
+    "typescript": { "optional": false },
+    "typescript-eslint": { "optional": false }
   },
   "devDependencies": {
     "eslint": "~9.39.2",

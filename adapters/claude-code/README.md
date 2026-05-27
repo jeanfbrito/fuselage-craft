@@ -17,7 +17,7 @@ run the type gate when working on a consumer product repo.
 The adapter holds **no Fuselage vocabulary** of its own. All token/component/hook names
 come from the resolver at run-time.
 
-The `fuselage-resolve` and `fuselage-gate` commands must be on PATH. Install the toolkit globally (`npm link` from the repo, or `npm i -g fuselage-craft` once published), or add it as a project devDep and call the bins via your package scripts. The Claude Code adapter shells out to these commands.
+The `fuselage-resolve` and `fuselage-gate` commands must be reachable. Add the toolkit as a project devDep (`npm i -D github:RocketChat/fuselage-craft`) and call the bins via `npx`/package scripts, or `npm link` it globally from a clone. The Claude Code adapter shells out to these commands.
 
 ## Install into Claude Code (symlink)
 
