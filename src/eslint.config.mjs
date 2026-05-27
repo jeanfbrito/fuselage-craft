@@ -143,6 +143,7 @@ export default [
       'fuselage-craft-gate/no-raw-color': 'error',
       'fuselage-craft-gate/no-literal-dimension': 'error',
       'fuselage-craft-gate/no-literal-shadow': 'error',
+      'fuselage-craft-gate/no-literal-media-query': 'error',
       // Registered but no-op here — the live `palette` option is injected only by
       // run-gate.mjs via resolveCategory('semantic'). Under standalone `npx eslint
       // --config` this rule has no palette and deliberately no-ops (never false-positives).
