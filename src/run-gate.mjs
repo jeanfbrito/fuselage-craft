@@ -177,6 +177,24 @@ async function runLintGate(fuselageControls, livePalette) {
   return { errors: totalErrors, warnings: totalWarnings };
 }
 
+// ─── Companion gate ───────────────────────────────────────────────────────────
+
+/**
+ * Run the companion-reconciliation check by dynamically importing
+ * reconcileCompanions from resolve.mjs (same pattern as loadLivePalette /
+ * loadLiveFuselageControls).  Never throws; on any infra failure returns
+ * { status:'unavailable', reason, missing:[] }.
+ */
+async function runCompanionGate() {
+  const resolverPath = pathToFileURL(join(GATE_DIR, 'resolve.mjs')).href;
+  try {
+    const { reconcileCompanions } = await import(resolverPath);
+    return await reconcileCompanions();
+  } catch (err) {
+    return { status: 'unavailable', reason: err.message, missing: [] };
+  }
+}
+
 // ─── Type gate ────────────────────────────────────────────────────────────────
 
 function runTypeGate() {
@@ -241,17 +259,55 @@ process.stdout.write(
 );
 const typeExitCode = await runTypeGate();
 
+process.stdout.write(
+  '\n─── Companion gate ──────────────────────────────────\n',
+);
+const companionResult = await runCompanionGate();
+const companionStatus = companionResult.status;
+
+if (companionResult.note) {
+  // Minified-only install: no coverage, but not a failure
+  process.stdout.write(`NOTE: ${companionResult.note}\n`);
+  process.stdout.write(`Companion gate: PASS (no coverage — minified-only bundle; rely on runtime launch)\n`);
+} else if (companionStatus === 'ok') {
+  const reconciledCount = Object.values(companionResult.checked ?? {}).reduce(
+    (n, pkg) => n + (pkg.imports ?? 0),
+    0,
+  );
+  process.stdout.write(
+    `Companion gate: PASS — ${reconciledCount} companion symbols reconciled\n`,
+  );
+} else if (companionStatus === 'missing') {
+  for (const entry of companionResult.missing) {
+    process.stdout.write(
+      `✗ ${entry.companion} does not export '${entry.symbol}' (imported by ${entry.importedBy})\n`,
+    );
+  }
+  process.stdout.write(
+    `→ bump the companion package(s) above to versions that export these symbols\n`,
+  );
+} else {
+  // unavailable — infra failure, note only
+  process.stdout.write(
+    `NOTE: companion reconciliation unavailable — ${companionResult.reason ?? 'unknown error'}\n`,
+  );
+}
+
 // ─── Summary ──────────────────────────────────────────────────────────────────
 
 process.stdout.write('\n═════════════════════════════════════════════════════\n');
 const typeStatus = typeExitCode === 0 ? 'PASS' : 'FAIL';
 const lintStatus = lintErrors > 0 ? 'FAIL' : 'PASS';
+const companionSummaryStatus =
+  companionResult.note ? 'PASS' :
+  companionStatus === 'ok' ? 'PASS' : companionStatus === 'missing' ? 'FAIL' : 'SKIP';
 
-process.stdout.write(`Type gate : ${typeStatus}\n`);
+process.stdout.write(`Type gate      : ${typeStatus}\n`);
 process.stdout.write(
-  `Lint gate : ${lintStatus}  (${lintErrors} errors, ${lintWarnings} warnings)\n`,
+  `Lint gate      : ${lintStatus}  (${lintErrors} errors, ${lintWarnings} warnings)\n`,
 );
+process.stdout.write(`Companion gate : ${companionSummaryStatus}\n`);
 process.stdout.write('═════════════════════════════════════════════════════\n\n');
 
-const failed = lintErrors > 0 || typeExitCode !== 0;
+const failed = lintErrors > 0 || typeExitCode !== 0 || companionStatus === 'missing';
 exit(failed ? 1 : 0);

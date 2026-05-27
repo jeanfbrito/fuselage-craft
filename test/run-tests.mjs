@@ -3,7 +3,7 @@
  * run-tests.mjs — runs all rule RuleTester suites.
  *
  * Each test module calls RuleTester.run() which throws on failure.
- * All eight suites must pass or the process exits nonzero.
+ * All nine suites must pass or the process exits nonzero.
  *
  * Usage (from repo root):
  *   node test/run-tests.mjs
@@ -18,6 +18,7 @@ const suites = [
   './prefer-box.test.mjs',
   './valid-color-token.test.mjs',
   './resolve-diff.test.mjs',
+  './reconcile-companions.test.mjs',
 ];
 
 let passed = 0;

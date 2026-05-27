@@ -1038,6 +1038,375 @@ async function resolveHooks() {
   }
 }
 
+// ─── Companion reconciliation ─────────────────────────────────────────────────
+
+/**
+ * Pure function: given a map of symbols fuselage imports from each companion
+ * and a map of symbols each companion exports, return all imported symbols that
+ * are NOT present in the companion's export list.
+ *
+ * @param {Object.<string, string[]>} importsByCompanion
+ * @param {Object.<string, string[]>} exportsByCompanion
+ * @returns {{ companion: string, symbol: string }[]} sorted, deterministic
+ */
+export function findMissingSymbols(importsByCompanion, exportsByCompanion) {
+  const results = [];
+  for (const [pkg, importedNames] of Object.entries(importsByCompanion)) {
+    const exportedSet = new Set(exportsByCompanion[pkg] ?? []);
+    for (const name of importedNames) {
+      if (!exportedSet.has(name)) {
+        results.push({ companion: pkg, symbol: name });
+      }
+    }
+  }
+  // Sort deterministically: companion first, then symbol
+  results.sort((a, b) => {
+    const cmp = a.companion.localeCompare(b.companion);
+    return cmp !== 0 ? cmp : a.symbol.localeCompare(b.symbol);
+  });
+  return results;
+}
+
+/**
+ * Parse ESM static import/export declarations from a source text string and
+ * return a map of companion specifier → exported names collected.
+ *
+ * Handles:
+ *   import { A, B as C } from '@rocket.chat/pkg'   → pkg: [A, B]
+ *   export { X } from '@rocket.chat/pkg'            → pkg: [X]
+ *
+ * Skips namespace imports (`import * as x`) — can't reconcile individual names.
+ * Skips `import type` / `export type` — not runtime values.
+ * Skips '@rocket.chat/fuselage' itself.
+ *
+ * Exported for unit testing. Pass the loaded `ts` module.
+ *
+ * @param {string} sourceText
+ * @param {object} ts  - loaded TypeScript module
+ * @returns {{ [specifier: string]: string[] }}
+ */
+export function collectNamedImportsFromSource(sourceText, ts) {
+  const sf = ts.createSourceFile(
+    '__synthetic__.js',
+    sourceText,
+    ts.ScriptTarget.ESNext,
+    /* setParentNodes */ true,
+    ts.ScriptKind.JS,
+  );
+
+  /** @type {{ [spec: string]: string[] }} */
+  const result = {};
+
+  for (const stmt of sf.statements) {
+    let modSpec = null;
+    let names = null;
+
+    if (ts.isImportDeclaration(stmt)) {
+      // Skip `import type { … }`
+      if (stmt.importClause?.isTypeOnly) continue;
+
+      const specNode = stmt.moduleSpecifier;
+      if (!specNode || specNode.kind !== ts.SyntaxKind.StringLiteral) continue;
+      modSpec = specNode.text;
+
+      const bindings = stmt.importClause?.namedBindings;
+      if (!bindings) continue;
+      if (ts.isNamespaceImport(bindings)) continue; // import * as x
+      if (!ts.isNamedImports(bindings)) continue;
+
+      names = [];
+      for (const el of bindings.elements) {
+        if (el.isTypeOnly) continue;
+        names.push(el.propertyName?.text ?? el.name.text);
+      }
+    } else if (ts.isExportDeclaration(stmt)) {
+      // Skip `export type { … } from '…'`
+      if (stmt.isTypeOnly) continue;
+
+      const specNode = stmt.moduleSpecifier;
+      if (!specNode || specNode.kind !== ts.SyntaxKind.StringLiteral) continue;
+      modSpec = specNode.text;
+
+      const exportClause = stmt.exportClause;
+      if (!exportClause) continue;
+      if (!ts.isNamedExports(exportClause)) continue;
+
+      names = [];
+      for (const el of exportClause.elements) {
+        if (el.isTypeOnly) continue;
+        names.push(el.propertyName?.text ?? el.name.text);
+      }
+    }
+
+    if (!modSpec || !names || names.length === 0) continue;
+    if (!/^@rocket\.chat\//.test(modSpec)) continue;
+    if (modSpec === '@rocket.chat/fuselage') continue;
+
+    if (!result[modSpec]) result[modSpec] = [];
+    for (const name of names) {
+      if (!result[modSpec].includes(name)) result[modSpec].push(name);
+    }
+  }
+
+  return result;
+}
+
+/**
+ * Members that are interop/builtin — never real companion exports.
+ * Captured accesses on these names are silently skipped to avoid false 'missing' reports.
+ */
+const RESERVED_MEMBERS = new Set([
+  '__esModule', 'default', 'prototype', '__proto__', 'constructor',
+  'hasOwnProperty', 'isPrototypeOf', 'propertyIsEnumerable',
+  'toString', 'toLocaleString', 'valueOf',
+  'length', 'name', 'call', 'apply', 'bind', 'arguments', 'caller',
+]);
+
+/**
+ * Extract companion symbols from a webpack CJS bundle file.
+ *
+ * The bundle emits:
+ *   varName = __webpack_require__(/*! @rocket.chat/pkg * / "@rocket.chat/pkg")
+ * followed by property accesses:
+ *   varName.symbolName(...)
+ *   varName["symbolName"] / varName['symbolName']
+ *
+ * Returns { [specifier]: Map<symbolName, 'bundle'> } — each symbol mapped to a
+ * fixed importedBy value since CJS bundles don't preserve per-file attribution.
+ *
+ * Single-pass: builds one combined regex over all captured varNames and runs it
+ * once over the full bundle text (O(bundleLength)), routing each hit to its
+ * specifier via the varName→specifier map.
+ *
+ * @param {string} bundleText
+ * @param {string} [bundleBasename]  - used as importedBy value
+ * @returns {{ [specifier: string]: Map<string, string> }}
+ */
+export function extractCompanionSymbolsFromBundle(bundleText, bundleBasename) {
+  const importedBy = bundleBasename ?? 'bundle';
+
+  // Step 1: build varName → specifier map from __webpack_require__ calls
+  // Pattern: [const|let|var] varName = __webpack_require__(/*! @rc/pkg */ "...")
+  const reqRe = /(?:(?:const|let|var)\s+)?(\w+)\s*=\s*__webpack_require__\s*\(\s*\/\*!?\s*(@rocket\.chat\/[^\s*/]+)\s*\*\//g;
+  /** @type {{ [varName: string]: string }} */
+  const varToSpec = {};
+  let m;
+  while ((m = reqRe.exec(bundleText)) !== null) {
+    const [, varName, spec] = m;
+    if (!varToSpec[varName]) varToSpec[varName] = spec;
+  }
+
+  /** @type {{ [specifier: string]: Map<string, string> }} */
+  const result = {};
+
+  const varNames = Object.keys(varToSpec);
+  if (varNames.length === 0) return result;
+
+  // Step 2 (single pass): build one combined regex matching any captured varName
+  // followed by .member  OR  ["member"] / ['member'].
+  // Escape each varName for regex safety (they are JS identifiers, but be defensive).
+  const escapedVars = varNames.map((v) => v.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+  const combinedRe = new RegExp(
+    '(' + escapedVars.join('|') + ')' +
+    '(?:\\.([a-zA-Z_$][a-zA-Z0-9_$]*)|\\[(["\'])([a-zA-Z_$][a-zA-Z0-9_$]*)\\3\\])',
+    'g',
+  );
+
+  let pm;
+  while ((pm = combinedRe.exec(bundleText)) !== null) {
+    const [, varName, dotMember, , bracketMember] = pm;
+    const sym = dotMember ?? bracketMember;
+    if (!sym) continue;
+    if (RESERVED_MEMBERS.has(sym)) continue;
+
+    const spec = varToSpec[varName];
+    if (!spec) continue;
+
+    if (!result[spec]) result[spec] = new Map();
+    if (!result[spec].has(sym)) result[spec].set(sym, importedBy);
+  }
+
+  return result;
+}
+
+/**
+ * Locate fuselage's compiled JS files.
+ *
+ * Fuselage ships as CJS webpack bundles (dist/*.js). We prefer the development
+ * build because it preserves readable symbol names; fall back to production.
+ *
+ * Returns an array of { path, basename } objects.
+ */
+function fuselageJsFiles() {
+  try {
+    const pkgJsonPath = anchorRequire.resolve('@rocket.chat/fuselage/package.json');
+    const pkgDir = dirname(pkgJsonPath);
+    const pkgJson = JSON.parse(readFileSync(pkgJsonPath, 'utf8'));
+
+    // Prefer the known CJS webpack bundles (readable dev build first).
+    // pkgJson.main may point to a small switcher (index.js) — check the
+    // well-known bundle paths before falling back to main.
+    const candidates = [
+      join(pkgDir, 'dist/fuselage.development.js'),
+      join(pkgDir, 'dist/fuselage.production.js'),
+      pkgJson.main ? join(pkgDir, pkgJson.main) : null,
+    ].filter(Boolean);
+
+    const found = [];
+    for (const p of candidates) {
+      if (existsSync(p)) {
+        found.push({ path: p, basename: p.split('/').pop() ?? p });
+        break; // first viable bundle is enough
+      }
+    }
+    return found;
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * Walk fuselage's compiled JS bundles and collect value imports from
+ * companion @rocket.chat/* packages.
+ *
+ * Returns:
+ *   {
+ *     status: 'ok'|'missing'|'unavailable',
+ *     reason?: string,
+ *     fuselageVersion?: string,
+ *     missing: Array<{ companion: string, symbol: string, importedBy: string }>,
+ *     checked: { [pkg]: { imports: number, exports: number } },
+ *     skipped: { [pkg]: string }
+ *   }
+ */
+export async function reconcileCompanions() {
+  try {
+    const ts = loadTypeScript();
+    if (!ts) {
+      return { status: 'unavailable', reason: 'typescript not resolvable', missing: [], checked: {}, skipped: {} };
+    }
+
+    const fuselageVersion = readPackageVersion('@rocket.chat/fuselage');
+
+    // ── Step 1: collect companion symbols from fuselage's compiled JS ──────────
+    const jsFiles = fuselageJsFiles();
+    if (jsFiles.length === 0) {
+      return { status: 'unavailable', reason: 'fuselage compiled JS not found', missing: [], checked: {}, skipped: {} };
+    }
+
+    // Detect whether only a minified/production bundle was available.
+    // fuselageJsFiles() returns at most one file (breaks at first hit).
+    // The dev bundle basename contains 'development'; anything else is minified.
+    const isDevBundleAbsent = jsFiles.length > 0 && !jsFiles[0].basename.includes('development');
+
+    // importedByMap: { [specifier]: Map<symbolName, importedByBasename> }
+    const importedByMap = {}; // pkg -> Map<symbolName, importedByBasename>
+
+    for (const { path: filePath, basename } of jsFiles) {
+      let text;
+      try {
+        text = readFileSync(filePath, 'utf8');
+      } catch {
+        continue;
+      }
+
+      // Fast skip: only parse if the file mentions @rocket.chat/
+      if (!text.includes('@rocket.chat/')) continue;
+
+      // Run BOTH extractors and union their results.
+      // extractCompanionSymbolsFromBundle: CJS webpack bundle (dot + bracket accesses).
+      // collectNamedImportsFromSource: ESM AST (fires only when file has ESM import/export
+      //   declarations; no-ops on CJS bundles because TS AST finds no such statements).
+      const cjsExtracted = extractCompanionSymbolsFromBundle(text, basename);
+      for (const [spec, symbolMap] of Object.entries(cjsExtracted)) {
+        if (!importedByMap[spec]) importedByMap[spec] = new Map();
+        for (const [sym, by] of symbolMap.entries()) {
+          if (!importedByMap[spec].has(sym)) importedByMap[spec].set(sym, by);
+        }
+      }
+
+      // ESM extractor — only active when the loaded TS module is available
+      if (ts) {
+        const esmExtracted = collectNamedImportsFromSource(text, ts);
+        for (const [spec, names] of Object.entries(esmExtracted)) {
+          if (!importedByMap[spec]) importedByMap[spec] = new Map();
+          for (const name of names) {
+            if (!importedByMap[spec].has(name)) importedByMap[spec].set(name, basename);
+          }
+        }
+      }
+    }
+
+    // ── Step 2: resolve each companion's exports; skip those without types ─────
+    const importsByCompanion = {};
+    const exportsByCompanion = {};
+    const checked = {};
+    const skipped = {};
+
+    for (const [companionPkg, symbolMap] of Object.entries(importedByMap)) {
+      const importedNames = [...symbolMap.keys()];
+      importsByCompanion[companionPkg] = importedNames;
+
+      const companionEntry = resolveTypesEntry(companionPkg);
+      if (!companionEntry) {
+        // Not installed or no types field → skip rather than false-positive every import
+        skipped[companionPkg] = 'companion not installed or no types';
+        continue;
+      }
+
+      const companionProg = getTsProgram(companionEntry.path);
+      let exportedNames = [];
+      if (companionProg) {
+        const syms = getExportedSymbols(companionProg.checker, companionProg.sourceFile);
+        exportedNames = syms.map((s) => s.getName());
+      }
+
+      if (exportedNames.length === 0) {
+        // TS program resolved but yielded zero exports — parse/build failure.
+        // Skip to avoid false-positive storm (every imported symbol flagged as missing).
+        skipped[companionPkg] = 'could not resolve companion exports';
+        continue;
+      }
+
+      exportsByCompanion[companionPkg] = exportedNames;
+      checked[companionPkg] = { imports: importedNames.length, exports: exportedNames.length };
+    }
+
+    // Only reconcile companions that had resolvable exports
+    const reconcileImports = {};
+    for (const pkg of Object.keys(exportsByCompanion)) {
+      reconcileImports[pkg] = importsByCompanion[pkg];
+    }
+
+    const missingPairs = findMissingSymbols(reconcileImports, exportsByCompanion);
+
+    // Attach importedBy from the recorded map
+    const missing = missingPairs.map(({ companion, symbol }) => ({
+      companion,
+      symbol,
+      importedBy: importedByMap[companion]?.get(symbol) ?? 'unknown',
+    }));
+
+    const totalExtracted = Object.values(importedByMap).reduce((n, m) => n + m.size, 0);
+
+    const status = missing.length > 0 ? 'missing' : 'ok';
+
+    let note;
+    if (totalExtracted === 0) {
+      note = isDevBundleAbsent
+        ? 'only a minified/production bundle was scanned — static companion check has no coverage; rely on a runtime launch'
+        : 'no companion symbols were extracted — static check has no coverage; rely on a runtime launch';
+    }
+
+    if (note !== undefined) {
+      return { status, fuselageVersion, missing, checked, skipped, note };
+    }
+    return { status, fuselageVersion, missing, checked, skipped };
+  } catch (err) {
+    return { status: 'unavailable', reason: err.message, missing: [], checked: {}, skipped: {} };
+  }
+}
+
 // ─── Public API ───────────────────────────────────────────────────────────────
 
 /**
@@ -1315,6 +1684,56 @@ export async function main() {
     }
 
     return;
+  }
+
+  // ── check-companions mode ──────────────────────────────────────────────────
+  if (categoryArg === 'check-companions') {
+    const result = await reconcileCompanions();
+
+    if (jsonMode) {
+      process.stdout.write(JSON.stringify(result, null, 2) + '\n');
+      return;
+    }
+
+    const checkedEntries = Object.entries(result.checked ?? {});
+    const totalImports = checkedEntries.reduce((s, [, c]) => s + c.imports, 0);
+    process.stdout.write('═══ fuselage-craft companion check ═══════════════════\n');
+    if (result.fuselageVersion) {
+      process.stdout.write(`fuselage ${result.fuselageVersion} — imports reconciled against installed companions\n`);
+    }
+    process.stdout.write('──────────────────────────────────────────────────────\n');
+
+    if (result.status === 'unavailable') {
+      process.stdout.write(`NOTE: ${result.reason}\n`);
+      return; // exit 0
+    }
+
+    // Show skipped companions as NOTE lines
+    for (const [pkg, reason] of Object.entries(result.skipped ?? {})) {
+      process.stdout.write(`note: ${pkg} skipped (${reason})\n`);
+    }
+
+    if (result.note) {
+      process.stdout.write(`NOTE: ${result.note}\n`);
+      process.stdout.write(`  (no coverage — companion check skipped; rely on a runtime launch)\n`);
+      return; // exit 0, no false confidence
+    }
+
+    if (result.status === 'ok') {
+      process.stdout.write(
+        `✓ ok   all ${totalImports} imported companion symbols are exported by the installed versions` +
+          ` (${checkedEntries.length} companion${checkedEntries.length !== 1 ? 's' : ''} checked)\n`,
+      );
+      return; // exit 0
+    }
+
+    // status === 'missing'
+    for (const { companion, symbol, importedBy } of result.missing) {
+      process.stdout.write(
+        `✗ ${companion} does not export '${symbol}' (imported by ${importedBy}) — bump ${companion} to a version that exports it\n`,
+      );
+    }
+    process.exit(1);
   }
 
   if (jsonMode) {
