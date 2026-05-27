@@ -1,198 +1,161 @@
 # fuselage-craft
 
-A conformance toolkit for products that **consume** `@rocket.chat/fuselage`. It keeps
-consumer UI faithful to the design system: it treats the installed Fuselage packages as the
-single source of truth and never copies a Fuselage value or name into your code.
+An **agent skill** for designing and refining UI in products that consume
+`@rocket.chat/fuselage` — without ever drifting from the design system. You point it at a
+screen, a component, or a feature idea; it works in Fuselage components and token references,
+proves conformance with a hard gate, and refuses to invent design values.
 
-Not for authoring Fuselage itself — that work happens in the Fuselage repo with its own
-tokens and components.
+It is **not** for authoring Fuselage itself — that work lives in the Fuselage repo with its
+own tokens and components.
 
-## Mental model
+> Today the skill ships as a Claude Code adapter ([`adapters/claude-code/`](adapters/claude-code/)).
+> The skill contract is agent-agnostic; more adapters can wrap the same engine.
 
-Three live mechanisms, all reading the installed package, none holding a copy:
+## Prime directive: reference, never replicate
 
-1. **Resolve, don't recall.** Token / component / hook names come from the resolver
-   (`fuselage-resolve <category>`), read live from the installed packages via TypeScript type
-   introspection. The toolkit bakes in zero Fuselage vocabulary.
+**Fuselage is the source of truth. This skill holds no copy of it.**
+
+- No token snapshot, no manifest, no hardcoded value — not in the skill, not in the code it
+  produces.
+- Anything it needs about a component, prop, or token, it resolves from the **installed
+  package** at use-time. The package is always more current than any copy.
+- Correctness comes from pointing at the real thing, not from remembering it.
+
+How that holds up in practice — three live mechanisms, all reading the installed package:
+
+1. **Resolve, don't recall.** Component / token / hook names come from the live resolver, read
+   from the installed packages. The skill bakes in zero Fuselage vocabulary.
 2. **The type gate enforces.** Emitted JSX must typecheck against the installed Fuselage
-   types, so a wrong prop or token value is a compile error, not a guess.
+   types, so a wrong prop or token is a compile error, not a guess.
 3. **The lint gate kills literals.** Raw hex, px, shadows, and hand-rolled inputs are banned
-   by value-free ESLint rules — they enforce structural patterns and know no Fuselage values.
+   by value-free rules.
 
 So product code references token names (`color='default'`, `p='x16'`, `<Button primary>`), the
 value resolves inside Fuselage at runtime, and a token change propagates everywhere with no
 consumer edit.
 
-## Requirements
+## Commands
 
-- Node `>=20` (the toolkit pins 22.20.0 via volta, matching the Fuselage monorepo).
-- A consumer project with `@rocket.chat/fuselage*` installed in its `node_modules`.
+Invoke as `/fuselage-craft <command> <target>`. Everything after the command is the target;
+if the first word isn't a command, the whole input is handled as a general request under the
+laws. Every command pins the installed Fuselage version, resolves vocabulary live, and (where
+it writes code) closes by running the gate.
 
-## Install
-
-No publish step is required — install straight from the repo. The toolkit is plain ES
-modules with no build step, so any of these work in your product repo:
-
-```sh
-# from GitHub (default branch)
-npm i -D github:jeanfbrito/fuselage-craft
-
-# pin a branch or tag
-npm i -D github:jeanfbrito/fuselage-craft#main
-
-# once published to npm
-npm i -D fuselage-craft
-```
-
-This installs the `fuselage-resolve` and `fuselage-gate` bins and exposes the ESLint plugin
-at `fuselage-craft/eslint-plugin`. Run the bins from your product repo root (via
-`npx fuselage-gate …` or a package script) so the resolver can walk up to find
-`@rocket.chat/fuselage` in your `node_modules`.
-
-`eslint`, `typescript`, and `typescript-eslint` are **peer dependencies** — the toolkit uses
-the copies already installed in your project (so the gate runs against your exact versions).
-npm 7+ installs missing peers automatically; otherwise add them yourself.
-
-For local development on the toolkit itself, clone and link instead:
-
-```sh
-git clone https://github.com/jeanfbrito/fuselage-craft
-cd fuselage-craft && npm install && npm link
-# then, from your product repo:
-npm link fuselage-craft
-```
-
-## Usage
-
-### Resolve — read the live vocabulary
-
-```sh
-fuselage-resolve all          # every category (components, tokens, hooks, forms, inputs...)
-fuselage-resolve semantic     # color tokens grouped by prop (color=, bg=, borderColor=)
-fuselage-resolve components
-fuselage-resolve inputs
-```
-
-Each category is read live from the installed packages. A category that can't be resolved
-reports `unavailable` rather than guessing — the type gate still enforces correctness.
-
-### Gate — lint + type check
-
-`fuselage-gate` runs the lint rules **and** `tsc --noEmit` against your installed Fuselage
-types. A change is not done until both pass.
-
-```sh
-fuselage-gate 'src/**/*.tsx'
-fuselage-gate 'src/**/*.{ts,tsx}' 'app/**/*.tsx'
-```
-
-Running from source instead of a linked install:
-
-```sh
-node /path/to/fuselage-craft/bin/fuselage-resolve.mjs all
-node /path/to/fuselage-craft/bin/fuselage-gate.mjs 'src/**/*.tsx'
-```
-
-### ESLint plugin — wire into your config
-
-```js
-// eslint.config.mjs
-import fuselageCraftGate from 'fuselage-craft/eslint-plugin';
-
-export default [
-  {
-    files: ['**/*.{ts,tsx}'],
-    plugins: { 'fuselage-craft-gate': fuselageCraftGate },
-    rules: {
-      'fuselage-craft-gate/no-raw-color': 'error',
-      'fuselage-craft-gate/no-literal-dimension': 'error',
-      'fuselage-craft-gate/no-literal-shadow': 'error',
-      'fuselage-craft-gate/require-field-wrapper': 'warn',
-      'fuselage-craft-gate/prefer-box': 'warn',
-      // valid-color-token needs the live palette — leave off here, run it via fuselage-gate
-      'fuselage-craft-gate/valid-color-token': 'off',
-    },
-  },
-];
-```
-
-| Rule | Severity | What it flags |
-|---|---|---|
-| `no-raw-color` | error | Hex/rgb/rgba/hsl literals in JSX color attrs, `style={{}}`, `css`/`styled` templates |
-| `no-literal-dimension` | error | Literal `px`/`rem` spacing/sizing values in `style={{}}` and `css`/`styled` |
-| `no-literal-shadow` | error | Literal `boxShadow` / `box-shadow` values |
-| `require-field-wrapper` | warn | Input controls not inside a `<Field>` ancestor |
-| `prefer-box` | warn | Raw DOM elements (`div`, `span`, …) with inline `style={{}}` |
-| `valid-color-token` | error | Invalid / double-prefixed Fuselage color token names — needs the live palette via `fuselage-gate` |
-
-> `valid-color-token` is a no-op unless `fuselage-gate` injects the live palette. It never
-> false-positives on a standalone `eslint` run.
-
-### Type gate
-
-The type gate runs `tsc --noEmit` against your `tsconfig.json`, so TypeScript validates every
-`color=`, `fontScale=`, `elevation=` prop against the installed Fuselage declarations — wrong
-prop names and invalid token values become compile errors automatically.
-
-Box `color=` takes the text token **without** the `font-` prefix (`color='default'`, `'hint'`,
-`'danger'`); `bg=` takes the full surface/status name (`bg='surface-tint'`). The resolver lists
-canonical names (e.g. `font-default`); `valid-color-token` enforces the correct prop form.
-
-```sh
-node /path/to/fuselage-craft/src/typecheck.mjs
-node /path/to/fuselage-craft/src/typecheck.mjs -p tsconfig.app.json
-```
-
-## Adapters
-
-### Claude Code
-
-`adapters/claude-code/` exposes the toolkit as a Claude Code skill. Each command resolves
-vocabulary live and closes by running the gate — the adapter holds no Fuselage vocabulary of
-its own. Install via symlink so the repo stays the source of truth:
-
-```sh
-ln -s /path/to/fuselage-craft/adapters/claude-code ~/.claude/skills/fuselage-craft
-```
-
-Invoke as `/fuselage-craft <command> <target>` from a product repo that consumes Fuselage:
-
-| Command | Category | What it does | Edits code | Runs gate |
+| Command | Group | What it does | Edits | Gate |
 |---|---|---|:---:|:---:|
-| `audit` | Evaluate | Conformance scan: gate drift + a judgment pass | no | yes |
-| `critique` | Evaluate | UX heuristic review (hierarchy, load, IA) | no | no |
-| `shape` | Build | Plan the feature as a Fuselage component tree | no | no |
-| `craft` | Build | Shape, then build the feature end to end | yes | yes |
-| `migrate` | Fix | Convert legacy / raw-CSS UI to Fuselage + tokens | yes | yes |
-| `clarify` | Fix | Fix UX copy, labels, error messages | yes | yes |
-| `adapt` | Fix | Make it responsive via `fuselage-hooks` | yes | yes |
-| `polish` | Refine | Complete states: loading, empty, error, focus | yes | yes |
-| `harden` | Refine | Edge cases, i18n, RTL, a11y, error paths | yes | yes |
+| `audit` | Evaluate | **Flagship.** Type + lint gate against the installed package, then a judgment pass; reports drift with file:line | no | yes |
+| `critique` | Evaluate | UX heuristic review — hierarchy, cognitive load, IA, a11y posture | no | no |
+| `shape` | Build | Plan a feature as a Fuselage component composition tree | no | no |
+| `craft` | Build | Shape, confirm, then build the feature end to end under the laws | yes | yes |
+| `migrate` | Fix | Convert legacy / raw-CSS / hand-rolled UI into Fuselage + token refs (map by role, never by value) | yes | yes |
+| `clarify` | Fix | Fix UX copy, labels, error and helper messages — words only, never values | yes | yes |
+| `adapt` | Fix | Make it responsive via `fuselage-hooks`, not media-query literals | yes | yes |
+| `polish` | Refine | Complete the states: loading, empty, error, hover, focus | yes | yes |
+| `harden` | Refine | Edge cases, i18n, RTL, a11y, error / disabled / loading paths | yes | yes |
 
 ```sh
 /fuselage-craft audit src/**
 /fuselage-craft migrate src/components/LegacyToolbar.tsx
 /fuselage-craft craft "invite-members dialog"
+/fuselage-craft polish src/views/Channel
 ```
 
-See [`adapters/claude-code/README.md`](adapters/claude-code/README.md) for the per-command flows.
+The agent contract — the full laws, the output guarantees, the anti-drift test, and what to
+do when Fuselage lacks something — lives in [`adapters/claude-code/SKILL.md`](adapters/claude-code/SKILL.md).
+Per-command flows are in [`adapters/claude-code/reference/`](adapters/claude-code/reference/).
+
+## The laws (in brief)
+
+Generated or modified product code carries **no literal design values** and reaches for the
+real component first:
+
+| Forbidden | Use instead |
+|---|---|
+| Literal hex / rgb | `color=` / `bg=` semantic token name |
+| Literal px spacing / margin / padding | `p` / `m` / `pi` / `pb` on the `x*` scale |
+| `font-size` / `font-weight` / `line-height` | `fontScale=` name |
+| Literal `box-shadow` | `elevation=` name |
+| Literal `border-radius` px | `borderRadius=` scale name |
+| Hand-rolled `<button>` / styled `<div>` button | `<Button primary\|secondary\|danger>` |
+| Hand-wired `<label>` + `<input>` | `<Field>` + `<FieldLabel>` + `<FieldRow>` |
+| Literal media query / breakpoint px | `useBreakpoints` / `useMediaQuery` |
+| Component / prop not in the installed types | surface as a Fuselage extension, don't hand-roll |
+| State conveyed by color alone | color + weight / icon / text |
+
+The **anti-drift test**: *would a Fuselage maintainer say "that is not how you use Fuselage"?*
+If yes, it failed.
+
+## Install
+
+Two pieces: the **skill** (the agent loads it) and the **engine** (the bins the skill shells
+out to, installed in the product repo you're working on).
+
+**Requirements:** Node `>=20`; a product repo with `@rocket.chat/fuselage*` installed.
+
+### 1. The skill
+
+Clone once and link the adapter into your agent's skills directory:
+
+```sh
+git clone https://github.com/jeanfbrito/fuselage-craft ~/tools/fuselage-craft
+cd ~/tools/fuselage-craft && npm install
+
+# Claude Code:
+ln -s ~/tools/fuselage-craft/adapters/claude-code ~/.claude/skills/fuselage-craft
+```
+
+### 2. The engine
+
+The skill calls `fuselage-resolve` and `fuselage-gate`. Make them reachable from the product
+repo — install straight from GitHub (no publish step; plain ESM, no build):
+
+```sh
+# in your product repo
+npm i -D github:jeanfbrito/fuselage-craft
+# the skill then calls the bins via npx
+```
+
+Or link the clone globally so the bins are on PATH everywhere:
+
+```sh
+cd ~/tools/fuselage-craft && npm link
+```
+
+`eslint`, `typescript`, and `typescript-eslint` are **peer dependencies** — the engine uses the
+copies already in your project, so the gate runs against your exact versions. npm 7+ installs
+missing peers automatically.
+
+## How "done" is proven
+
+Every command that writes code closes with the gate, run against the installed package — never
+a copy:
+
+- **Type gate (authoritative).** `tsc --noEmit` validates emitted JSX against the installed
+  Fuselage types. A wrong prop, token, or component is a compile error. Drift is impossible if
+  it typechecks.
+- **Lint gate.** Catches what types can't: raw hex, literal px, styled `<div>` over `<Box>`,
+  inputs outside `<Field>`. Value-free rules — they ban patterns, not specific Fuselage values.
+
+You can also run the gate standalone (CI, pre-commit, non-agent workflows) — it doesn't need
+the skill. See **[docs/cli.md](docs/cli.md)** for `fuselage-resolve` / `fuselage-gate` /
+type-gate usage, and **[docs/eslint-plugin.md](docs/eslint-plugin.md)** for wiring the rules
+into your own ESLint config.
 
 ## Keeping in sync with Fuselage
 
-The toolkit tracks Fuselage **automatically** — it holds no copy of the design system, so most
-releases need no action here.
+The skill tracks Fuselage **automatically** — it holds no copy, so most releases need no action.
 
 **Auto-tracked (do nothing):**
 
-- New / renamed / removed tokens, components, hooks — the resolver reads them live on the next run.
-- New / changed prop or token types — the type gate (`tsc`) validates against the installed types.
-- Literal-value lint rules — value-free, so Fuselage releases never affect them.
+- New / renamed / removed tokens, components, hooks — resolved live on the next run.
+- New / changed prop or token types — the type gate validates against the installed types.
+- Literal-value rules — value-free, so Fuselage releases never affect them.
 
 **The one manual surface:** `src/resolve.mjs` hardcodes *structural access paths* — the package
 specifiers, the `colors.mjs` / `typography.mjs` subpaths, and the `Palette` sub-object keys
 (`surface`, `text`, `stroke`, `status`, …). Only a Fuselage **packaging restructure** touches
-these. The failure mode is safe: a broken path makes that resolver category report
-`unavailable`, and the type gate still enforces correctness — the toolkit degrades, it never
+these, and the failure mode is safe: a broken path makes that resolver category report
+`unavailable`, and the type gate still enforces correctness — the skill degrades, it never
 silently produces wrong output.
 
 **Verify after a Fuselage major bump:**
@@ -202,8 +165,15 @@ fuselage-resolve all          # every category resolves (no "unavailable")
 node test/run-tests.mjs       # lint rules still green
 ```
 
-If a category reports `unavailable`, update its access path in `src/resolve.mjs` to match the
-new package structure. That is the only maintenance this toolkit needs.
+## Repo layout
+
+| Path | What |
+|------|------|
+| [`adapters/claude-code/`](adapters/claude-code/) | The skill — `SKILL.md` (laws + router), `reference/` (per-command flows) |
+| `src/` | The engine — `resolve.mjs`, `eslint-plugin/`, `run-gate.mjs`, `typecheck.mjs` |
+| `bin/` | The `fuselage-resolve` / `fuselage-gate` CLIs |
+| [`docs/`](docs/) | Engine reference — [CLI](docs/cli.md), [ESLint plugin](docs/eslint-plugin.md) |
+| `test/`, `fixtures/` | Rule test suites and a sample Fuselage-consuming fixture |
 
 ## License
 

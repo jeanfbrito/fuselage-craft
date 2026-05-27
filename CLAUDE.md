@@ -1,44 +1,81 @@
-# fuselage-craft — Agent Guide
+# fuselage-craft — maintainer guide
 
-Conformance toolkit for products that **consume** `@rocket.chat/fuselage`. Not
-the design system itself. See [README.md](./README.md) for full usage.
+For working **on** this repo. To understand the product, read [README.md](./README.md);
+for the skill's runtime behavior read [`adapters/claude-code/SKILL.md`](./adapters/claude-code/SKILL.md);
+for engine usage read [`docs/`](./docs/). This file holds the non-obvious constraints for
+changing the repo safely.
 
-## Core invariant — never hardcode Fuselage values
+## What it is
 
-The installed `@rocket.chat/fuselage*` packages are the **single source of
-truth**, resolved live. Never copy, cache, or hardcode a token name, color,
-dimension, fontScale, or component name into this repo's logic.
+The product is an **agent skill**: the Fuselage design skill for products that *consume*
+`@rocket.chat/fuselage` (audit / migrate / polish / craft / …). It is two halves:
 
-- Token/component/hook names → read live via the resolver (`src/resolve.mjs`).
-- Token *values* → never checked here; `tsc` validates props against installed types.
-- ESLint rules are **value-free**: they enforce structural patterns (no raw hex,
-  no literal px, inputs inside `<Field>`), never specific Fuselage values.
+- **The skill** — [`adapters/claude-code/`](./adapters/claude-code/): `SKILL.md` (laws +
+  command router) and `reference/<cmd>.md` (per-command flows). This is the product. Not
+  shipped in the npm package; installed by symlink.
+- **The engine** — `src/` + `bin/`: the resolver and the gate the skill shells out to (and a
+  standalone CI gate). This is what `npm i` ships.
 
-The one manual surface is the structural access paths in `src/resolve.mjs`
-(package specifiers, subpaths, `Palette` sub-object keys). A Fuselage packaging
-restructure is the only thing that touches these; the failure mode is safe
-(category reports `unavailable`, type gate still enforces correctness).
+Keep the skill and the engine in lockstep: a command the skill promises must be backed by what
+the engine enforces.
+
+## Prime directive — never violate
+
+**Reference, never replicate.** The installed `@rocket.chat/fuselage*` packages are the single
+source of truth, resolved live. Never copy, cache, or hardcode a token name, color, dimension,
+fontScale, or component name into this repo's logic or output.
+
+- Names → read live via the resolver (`src/resolve.mjs`).
+- Values → never checked here; the type gate validates props against the installed types.
+- Lint rules stay **value-free**: they ban literal *patterns* (any hex, any px, styled `<div>`,
+  inputs outside `<Field>`), never specific Fuselage values.
+
+## Invariants
+
+1. **Every lint rule needs a test.** `src/eslint-plugin/<rule>.mjs` ⇒ `test/<rule>.test.mjs`,
+   registered in `test/run-tests.mjs`. `node test/run-tests.mjs` must stay green.
+2. **`valid-color-token` is a NO-OP without an injected `palette`.** Standalone `eslint` runs
+   have no palette; only `run-gate.mjs` feeds the live one. It must never false-positive
+   without data. Preserve that guard.
+3. **Runtime externals are peer dependencies.** `eslint`, `typescript`, `typescript-eslint` are
+   resolved from the *host* repo (`resolve.mjs` anchors `typescript`; `eslint.config.mjs`
+   anchors `typescript-eslint`; `run-gate.mjs` imports `eslint`). They are declared as
+   `peerDependencies` so the gate uses the host project's copies.
+4. **Box prop forms:** `color=` takes the bare text token (no `font-`: `'default'`, `'hint'`);
+   `borderColor=` prepends `stroke-`; `bg=` takes the full `surface-*` name (or bare).
+   `valid-color-token` enforces these.
+5. **`resolve.mjs` access paths are the one manual surface** — package specifiers, `colors.mjs`
+   / `typography.mjs` subpaths, `Palette` sub-object keys. If a category reports `unavailable`
+   after a Fuselage bump, fix its access path; never hardcode the data.
+6. **ESM only** (`"type": "module"`), Node `>=20` (volta pins 22.20.0).
+
+## When you change X, also touch Y (doc fan-out)
+
+- **A lint rule** → rule file + its test + `run-tests.mjs` + the rule table in
+  [`docs/eslint-plugin.md`](./docs/eslint-plugin.md) + the laws in `README.md` and `SKILL.md`.
+- **A command** → `SKILL.md` router table + `adapters/claude-code/reference/<cmd>.md` + the
+  command table in `README.md`.
+- **A CLI flag or behavior** → [`docs/cli.md`](./docs/cli.md).
+- **A shipped file or runtime dep** → `package.json` `files` / `peerDependencies`.
 
 ## Layout
 
 | Path | What |
 |------|------|
+| `adapters/claude-code/` | The skill — `SKILL.md` (laws + router), `reference/` (per-command flows) |
 | `src/resolve.mjs` | Live resolver — token/component/hook introspection via TS types |
 | `src/eslint-plugin/` | Six value-free lint rules + `index.mjs` |
-| `src/run-gate.mjs` | Gate driver — injects live palette into `valid-color-token` |
-| `src/typecheck.mjs` | `tsc --noEmit` wrapper against consumer tsconfig |
+| `src/run-gate.mjs` | Gate driver — injects the live palette into `valid-color-token` |
+| `src/typecheck.mjs` | `tsc --noEmit` wrapper against the consumer tsconfig |
 | `bin/` | `fuselage-resolve`, `fuselage-gate` CLIs |
-| `test/run-tests.mjs` | Runs all RuleTester suites |
-| `adapters/claude-code/` | Claude Code skill adapter (audit/migrate/polish/...) |
+| `docs/` | Engine reference — `cli.md`, `eslint-plugin.md` |
+| `test/`, `fixtures/consumer/` | Rule suites + a real Fuselage-consuming fixture |
 
-## Working rules
+## Smoke tests
 
-- **Run tests after any rule change:** `node test/run-tests.mjs`. Every rule in
-  `src/eslint-plugin/` must have a matching `test/<rule>.test.mjs`.
-- **`valid-color-token` is a NO-OP without an injected `palette` option.** It
-  must never false-positive on standalone eslint runs — only `run-gate.mjs`
-  feeds it the live palette. Preserve that guard.
-- **Box prop forms:** `color=` takes the text token WITHOUT `font-` prefix
-  (`'default'`, `'hint'`); `bg=` takes the full surface/status name
-  (`'surface-tint'`). `valid-color-token` enforces the correct prop form.
-- ES modules only (`"type": "module"`), Node `>=20` (volta pins 22.20.0).
+```sh
+node test/run-tests.mjs                                   # rule suites (must be green)
+cd fixtures/consumer && node ../../bin/fuselage-resolve.mjs all   # resolver vs real Fuselage
+cd fixtures/consumer && node ../../bin/fuselage-gate.mjs 'src/good.tsx'  # PASS
+cd fixtures/consumer && node ../../bin/fuselage-gate.mjs 'src/bad.tsx'   # FAIL (gate catches drift)
+```
