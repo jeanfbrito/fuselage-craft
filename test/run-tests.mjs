@@ -15,6 +15,7 @@ const suites = [
   './no-literal-shadow.test.mjs',
   './require-field-wrapper.test.mjs',
   './prefer-box.test.mjs',
+  './valid-color-token.test.mjs',
 ];
 
 let passed = 0;
