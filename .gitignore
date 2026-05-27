@@ -1,3 +1,8 @@
 node_modules/
 fixtures/consumer/node_modules/
 *.log
+
+# GitNexus + agent tooling folders — global, never committed per-repo
+.gitnexus/
+.claude/
+.knowledge/
