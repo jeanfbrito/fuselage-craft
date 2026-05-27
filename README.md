@@ -33,20 +33,22 @@ npm i -D fuselage-craft
 
 Run from your product repo root so the resolver can walk up to find `@rocket.chat/fuselage` in your `node_modules`.
 
+The `fuselage-resolve` and `fuselage-gate` commands must be on PATH. Install the toolkit globally (`npm link` from the repo, or `npm i -g fuselage-craft` once published), or add it as a project devDep and call the bins via your package scripts.
+
 ```sh
 # Resolve all categories (components, tokens, hooks, forms, inputs...)
-npx fuselage-resolve all
+fuselage-resolve all
 
 # Resolve a specific category
-npx fuselage-resolve semantic
-npx fuselage-resolve components
-npx fuselage-resolve inputs
+fuselage-resolve semantic
+fuselage-resolve components
+fuselage-resolve inputs
 
 # Run the full gate (lint + type check) against your src/
-npx fuselage-gate 'src/**/*.tsx'
+fuselage-gate 'src/**/*.tsx'
 
 # Gate with explicit globs
-npx fuselage-gate 'src/**/*.{ts,tsx}' 'app/**/*.tsx'
+fuselage-gate 'src/**/*.{ts,tsx}' 'app/**/*.tsx'
 ```
 
 Or, when running from source:
@@ -93,6 +95,8 @@ export default [
 ## Type gate
 
 The type gate runs `tsc --noEmit` against the consumer's `tsconfig.json`. TypeScript validates every `color=`, `fontScale=`, `elevation=` prop against the installed Fuselage type declarations — wrong prop names and invalid token values become compile errors automatically.
+
+Box `color=` takes the text token WITHOUT the `font-` prefix (`color='default'`, `'hint'`, `'danger'`); `bg=` takes the full surface/status name (`bg='surface-tint'`). The resolver lists canonical token names (e.g. `font-default`); the `valid-color-token` rule enforces the correct prop form.
 
 ```sh
 # Type check only

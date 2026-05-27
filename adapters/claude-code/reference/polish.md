@@ -26,8 +26,8 @@ Polish passes are zero-breaking refines. The feature is already functional; now 
 
 ## Close with the gate
 
-Run `npx fuselage-gate <target>`. Type gate (tsc) and lint gate must both pass. Warnings are OK; errors are not. Done when green.
+Run `fuselage-gate <target>`. Type gate (tsc) and lint gate must both pass. Warnings are OK; errors are not. Done when green.
 
 ## Fuselage specifics
 
-Resolve the current vocabulary live: `npx fuselage-resolve components semantic fontscale spacing elevation radius`. Type gate is authoritative for spacing, elevation, radius. This pass polishes Button states (illustrative: loading, primary, disabled), Throbber, Callout, FieldError, and applies semantic color tokens and spacing rhythm.
+Resolve the current vocabulary live: `fuselage-resolve components semantic fontscale spacing elevation radius`. Type gate is authoritative for spacing, elevation, radius. This pass polishes Button states (illustrative: loading, primary, disabled), Throbber, Callout, FieldError, and applies semantic color tokens and spacing rhythm.

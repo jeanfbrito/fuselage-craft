@@ -60,4 +60,4 @@ This command produces a design plan, not product code. When the user confirms th
 
 ## Fuselage specifics
 
-Resolve the current vocabulary live: `npx fuselage-resolve all`. Type gate is authoritative for spacing, elevation, radius. This plan uses Box for layout, Button for actions, Field family for inputs, Callout for messages, Modal/Tabs/Table for structure, Avatar/Tile for cards, Throbber for loading, hooks like useBreakpoints, and semantic tokens for color, spacing, type, depth, and corners.
+Resolve the current vocabulary live: `fuselage-resolve all`. Type gate is authoritative for spacing, elevation, radius. This plan uses Box for layout, Button for actions, Field family for inputs, Callout for messages, Modal/Tabs/Table for structure, Avatar/Tile for cards, Throbber for loading, hooks like useBreakpoints, and semantic tokens for color, spacing, type, depth, and corners.

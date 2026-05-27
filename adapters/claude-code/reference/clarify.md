@@ -28,8 +28,8 @@ String changes only. No CSS, no component restructure, no design value changes. 
 
 ## Close with the gate
 
-Run `npx fuselage-gate <target>`. Type gate (tsc) and lint gate must pass. Warnings OK. Confirm no unintended code drift occurred. Done when green.
+Run `fuselage-gate <target>`. Type gate (tsc) and lint gate must pass. Warnings OK. Confirm no unintended code drift occurred. Done when green.
 
 ## Fuselage specifics
 
-Resolve the current vocabulary live: `npx fuselage-resolve forms components`. This pass changes only text. Components involved: FieldLabel, FieldHint (illustrative examples of form text), FieldError, Callout, Button text, and semantic copy patterns for empty and error states.
+Resolve the current vocabulary live: `fuselage-resolve forms components`. This pass changes only text. Components involved: FieldLabel, FieldHint (illustrative examples of form text), FieldError, Callout, Button text, and semantic copy patterns for empty and error states.

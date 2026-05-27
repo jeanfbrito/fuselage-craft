@@ -35,8 +35,8 @@ A complete, state-rich feature built entirely with Fuselage components and token
 
 ## Close with the gate
 
-Run `npx fuselage-gate <target>`. Type gate (`tsc --noEmit`) must pass (no type errors). Lint gate must pass (no raw hex, no literal px, no hand-rolled components, no missing Field wrappers). Warnings are OK; errors stop the build. Repeat until green. Then deploy.
+Run `fuselage-gate <target>`. Type gate (`tsc --noEmit`) must pass (no type errors). Lint gate must pass (no raw hex, no literal px, no hand-rolled components, no missing Field wrappers). Warnings are OK; errors stop the build. Repeat until green. Then deploy.
 
 ## Fuselage specifics
 
-Resolve the current vocabulary live: `npx fuselage-resolve all`. Type gate is authoritative for spacing, elevation, radius. This build uses Box for layout, Button for actions (illustrative: primary, secondary, danger variants), Field family for form structure, Callout for messages, Throbber for loading, and containers like Modal, Tabs, Table. Responsive behavior via hooks (illustrative: useBreakpoints, useMediaQuery, usePrefersReducedMotion). Semantic tokens (resolve the full set with resolve.mjs) for color, spacing on x* scale, fontScale, elevation, and borderRadius.
+Resolve the current vocabulary live: `fuselage-resolve all`. Type gate is authoritative for spacing, elevation, radius. This build uses Box for layout, Button for actions (illustrative: primary, secondary, danger variants), Field family for form structure, Callout for messages, Throbber for loading, and containers like Modal, Tabs, Table. Responsive behavior via hooks (illustrative: useBreakpoints, useMediaQuery, usePrefersReducedMotion). Semantic tokens (resolve the full set with resolve.mjs) for color, spacing on x* scale, fontScale, elevation, and borderRadius.

@@ -14,7 +14,7 @@ Flagship conformance command. Runs the mechanical gate, then a judgment pass. Re
 
 2. **Mechanical pass.** Run the gate:
    ```
-   npx fuselage-gate <target>
+   fuselage-gate <target>
    ```
    Capture all output. Two categories:
 
@@ -66,4 +66,4 @@ Audit IS the mechanical gate pass. Step 2 runs `run-gate.mjs` as its primary ins
 
 ## Fuselage specifics
 
-Resolve the current vocabulary live, do not recall it: `npx fuselage-resolve all`. The type gate validates anything type-only (elevation, radius, spacing). Examples below are illustrative, not a catalog. This command reasons about Box (color, bg, fontScale, spacing, elevation props), Button (variants, sizes, states), Field family for form structure, Callout, Throbber, and hooks like useBreakpoints for responsive detection.
+Resolve the current vocabulary live, do not recall it: `fuselage-resolve all`. The type gate validates anything type-only (elevation, radius, spacing). Examples below are illustrative, not a catalog. This command reasons about Box (color, bg, fontScale, spacing, elevation props), Button (variants, sizes, states), Field family for form structure, Callout, Throbber, and hooks like useBreakpoints for responsive detection.

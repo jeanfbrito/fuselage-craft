@@ -11,11 +11,13 @@ run the type gate when working on a consumer product repo.
 - Defines the command router and laws in [`SKILL.md`](./SKILL.md).
 - Provides per-command flow files in [`reference/`](./reference/).
 - Shells out to the toolkit CLIs:
-  - `npx fuselage-resolve <category>` — live resolver
-  - `npx fuselage-gate <globs>` — lint + type gate
+  - `fuselage-resolve <category>` — live resolver
+  - `fuselage-gate <globs>` — lint + type gate
 
 The adapter holds **no Fuselage vocabulary** of its own. All token/component/hook names
 come from the resolver at run-time.
+
+The `fuselage-resolve` and `fuselage-gate` commands must be on PATH. Install the toolkit globally (`npm link` from the repo, or `npm i -g fuselage-craft` once published), or add it as a project devDep and call the bins via your package scripts. The Claude Code adapter shells out to these commands.
 
 ## Install into Claude Code (symlink)
 
@@ -63,8 +65,8 @@ Fuselage-craft request under the laws defined in `SKILL.md`.
 
 | CLI | Source | What it does |
 |---|---|---|
-| `npx fuselage-resolve [category]` | `src/resolve.mjs` | Resolve token/component names from installed packages |
-| `npx fuselage-gate [globs]` | `src/run-gate.mjs` | Run lint + type gate |
+| `fuselage-resolve [category]` | `src/resolve.mjs` | Resolve token/component names from installed packages |
+| `fuselage-gate [globs]` | `src/run-gate.mjs` | Run lint + type gate |
 
 When running from source (not npm-linked):
 

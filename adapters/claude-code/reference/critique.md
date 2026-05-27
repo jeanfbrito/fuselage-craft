@@ -37,4 +37,4 @@ This command writes nothing and runs no gate. Hand off findings to the product t
 
 ## Fuselage specifics
 
-Resolve the current vocabulary live: `npx fuselage-resolve components semantic fontscale`. This review reasons about Button for action hierarchy (illustrative: primary, secondary, danger), Field family for label pairing, Callout for alerts, Modal and Tabs for structure, fontScale for hierarchy, semantic color tokens, and hooks like useBreakpoints for responsiveness.
+Resolve the current vocabulary live: `fuselage-resolve components semantic fontscale`. This review reasons about Button for action hierarchy (illustrative: primary, secondary, danger), Field family for label pairing, Callout for alerts, Modal and Tabs for structure, fontScale for hierarchy, semantic color tokens, and hooks like useBreakpoints for responsiveness.

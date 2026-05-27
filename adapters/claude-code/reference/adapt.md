@@ -28,8 +28,8 @@ Responsive behavior driven entirely by hooks and token names. No literal media q
 
 ## Close with the gate
 
-Run `npx fuselage-gate <target>`. Type gate and lint gate must pass. Warnings OK. Confirm no literal media queries remain. Done when green.
+Run `fuselage-gate <target>`. Type gate and lint gate must pass. Warnings OK. Confirm no literal media queries remain. Done when green.
 
 ## Fuselage specifics
 
-Resolve the current vocabulary live: `npx fuselage-resolve hooks breakpoints`. This pass drives responsive behavior through hooks (illustrative: useBreakpoints for breakpoint flags, useMediaQuery for custom queries, usePrefersReducedMotion for motion preferences), Box responsive props, logical spacing, and semantic color tokens.
+Resolve the current vocabulary live: `fuselage-resolve hooks breakpoints`. This pass drives responsive behavior through hooks (illustrative: useBreakpoints for breakpoint flags, useMediaQuery for custom queries, usePrefersReducedMotion for motion preferences), Box responsive props, logical spacing, and semantic color tokens.

@@ -33,7 +33,7 @@ The target repo depends on Fuselage. Resolve against what is actually installed:
 1. **Pin the version.** At session start, read the consumer's `package.json` + lockfile
    for `@rocket.chat/fuselage*`. All reasoning is pinned to THAT version. State it.
 2. **Resolve vocabulary live.** Never recall Fuselage names from memory. Run
-   `npx fuselage-resolve <category>` (or `node <toolkit>/bin/fuselage-resolve.mjs <category>` from source)
+   `fuselage-resolve <category>` (or `node <toolkit>/bin/fuselage-resolve.mjs <category>` from source)
    to get the current token / component / hook / fontScale names. Use ONLY what it returns.
    The type gate is the final authority for anything the resolver marks type-only (elevation, radius, spacing).
 3. **Resolve live, don't cache.** To confirm a prop, value, component, or token, read it
@@ -51,10 +51,7 @@ Generated or modified product code MUST:
 - **Carry no literal design values.** No hex, no px spacing, no font-size/weight, no
   `box-shadow`. Use token-name references: `color='default'`, `bg='surface-tint'` (or bare `bg='tint'`),
   `p='x16'`, `fontScale='h3'`, `elevation='2'`, `borderRadius='large'`. The value resolves
-  inside Fuselage at runtime via `--rcx-*` custom properties. Important: the Box
-  transforms prepend prefixes — `color=` prepends `font-`, `borderColor=` prepends `stroke-`
-  (so pass the BARE semantic name); `bg=` prepends `surface-` but also accepts the full
-  `surface-*` name. Resolve live names with `fuselage-resolve semantic`.
+  inside Fuselage at runtime via `--rcx-*` custom properties. Important: the Box `color=` prop takes the text token WITHOUT the `font-` prefix (pass the BARE semantic name like `'default'`, `'hint'`, `'danger'`); `borderColor=` prepends `stroke-`; `bg=` prepends `surface-` but also accepts the full `surface-*` name. Resolve live names with `fuselage-resolve semantic`.
 - **Reach for the component first.** Fuselage component → then `Box` with semantic props
   → never raw styled DOM. Never hand-roll a Button, Modal, input label, or error that
   Fuselage ships (`<Button primary>`, not a styled `<button>`).
@@ -144,10 +141,10 @@ above. Setup (below) runs first either way.
    installed, stop — this skill does not apply.
 2. Load product intent: `PRODUCT.md` if present (register, users, principles). The token
    contract is NOT a local DESIGN.md with values; it is the installed Fuselage package.
-3. Run `npx fuselage-resolve <relevant category>` (or `node <toolkit>/bin/fuselage-resolve.mjs <category>`)
+3. Run `fuselage-resolve <relevant category>` (or `node <toolkit>/bin/fuselage-resolve.mjs <category>`)
    for the vocabulary the task touches. Treat its output as current truth. Never guess names.
    The resolver is cwd-anchored — run it from the consumer repo root so it resolves the
    correct installed packages.
 4. Resolve the specific components / props / tokens the task touches from the package.
 5. Do the work under the laws above. Close with the gate:
-   `npx fuselage-gate <globs>` (or `node <toolkit>/bin/fuselage-gate.mjs <globs>`).
+   `fuselage-gate <globs>` (or `node <toolkit>/bin/fuselage-gate.mjs <globs>`).

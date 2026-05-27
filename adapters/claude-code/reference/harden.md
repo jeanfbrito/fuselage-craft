@@ -26,8 +26,8 @@ Hardening passes make the feature robust. It survives edge cases, works globally
 
 ## Close with the gate
 
-Run `npx fuselage-gate <target>`. Type gate and lint gate must pass. Warnings OK. Done when green.
+Run `fuselage-gate <target>`. Type gate and lint gate must pass. Warnings OK. Done when green.
 
 ## Fuselage specifics
 
-Resolve the current vocabulary live: `npx fuselage-resolve components forms hooks semantic`. The type gate is authoritative. This pass hardens through Field family for a11y, Callout for edge-case messages, hooks like useBreakpoints and usePrefersReducedMotion for responsive and preference-aware behavior, logical spacing, and semantic color tokens.
+Resolve the current vocabulary live: `fuselage-resolve components forms hooks semantic`. The type gate is authoritative. This pass hardens through Field family for a11y, Callout for edge-case messages, hooks like useBreakpoints and usePrefersReducedMotion for responsive and preference-aware behavior, logical spacing, and semantic color tokens.

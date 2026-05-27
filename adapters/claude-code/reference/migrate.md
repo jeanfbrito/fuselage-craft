@@ -47,8 +47,8 @@ Migrated source files plus a migration summary table listing every legacy constr
 
 ## Close with the gate
 
-Run `npx fuselage-gate [globs]` against all modified files. Fix every lint error (no-raw-color, no-literal-dimension, no-literal-shadow, require-field-wrapper, prefer-box) and every TypeScript error from `tsc --noEmit`. Warnings do not fail the gate; errors do. Do not mark migration complete until the gate exits zero.
+Run `fuselage-gate [globs]` against all modified files. Fix every lint error (no-raw-color, no-literal-dimension, no-literal-shadow, require-field-wrapper, prefer-box) and every TypeScript error from `tsc --noEmit`. Warnings do not fail the gate; errors do. Do not mark migration complete until the gate exits zero.
 
 ## Fuselage specifics
 
-Resolve the current vocabulary live: `npx fuselage-resolve semantic components forms hooks fontscale`. The type gate validates anything type-only. This lane relies on Box for styling, Button for actions (illustrative variants: primary, secondary, danger), Field family for form structure, Callout for messages, and hooks like useBreakpoints for responsive composition.
+Resolve the current vocabulary live: `fuselage-resolve semantic components forms hooks fontscale`. The type gate validates anything type-only. This lane relies on Box for styling, Button for actions (illustrative variants: primary, secondary, danger), Field family for form structure, Callout for messages, and hooks like useBreakpoints for responsive composition.
