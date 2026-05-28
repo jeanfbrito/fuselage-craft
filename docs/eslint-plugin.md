@@ -1,6 +1,6 @@
 # ESLint plugin reference
 
-The lint half of the [gate](cli.md). Seven **value-free** rules: they ban literal design-value
+The lint half of the [gate](cli.md). Eight **value-free** rules: they ban literal design-value
 patterns and enforce structural conventions — they hold no Fuselage values of their own.
 
 Wire them into your own flat config to get the structural rules in your editor and CI; run the
@@ -23,6 +23,7 @@ export default [
       'fuselage-craft-gate/no-literal-media-query': 'error',
       'fuselage-craft-gate/require-field-wrapper': 'warn',
       'fuselage-craft-gate/prefer-box': 'warn',
+      'fuselage-craft-gate/prefer-button': 'warn',
       // valid-color-token needs the live palette — leave off here, run it via fuselage-gate
       'fuselage-craft-gate/valid-color-token': 'off',
     },
@@ -40,6 +41,7 @@ export default [
 | `no-literal-media-query` | error | Literal `@media` queries in css/styled templates, `@media` string keys in emotion object-css (`css={{…}}`, `styled.x({…})`), and `matchMedia()` breakpoint string literals |
 | `require-field-wrapper` | warn | Input controls not inside a `<Field>` ancestor |
 | `prefer-box` | warn | Raw DOM elements (`div`, `span`, …) with inline `style={{}}` |
+| `prefer-button` | warn | Raw `<button>` or `<a>`-as-button (`href="#"`/`javascript:`, `onClick` without `href`, `role="button"`) — use Fuselage `<Button>` |
 | `valid-color-token` | error | Invalid / double-prefixed Fuselage color token names — **needs the live palette via [`fuselage-gate`](cli.md)** |
 
 ## `valid-color-token` and the live palette

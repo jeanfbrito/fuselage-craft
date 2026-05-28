@@ -154,6 +154,9 @@ export default [
       // it informs without blocking the gate. Reserve errors for objective drift above.
       'fuselage-craft-gate/require-field-wrapper': 'warn',
       'fuselage-craft-gate/prefer-box': 'warn',
+      // Warn (not error) — heuristic on <a>: real navigation links must not be false-flagged,
+      // so we stay advisory. Raw <button> and clear <a>-as-button patterns are always caught.
+      'fuselage-craft-gate/prefer-button': 'warn',
     },
   },
 ];
