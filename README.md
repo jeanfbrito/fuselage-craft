@@ -17,6 +17,8 @@ proves conformance with a hard gate, and refuses to invent design values.
 - Anything it needs about a component, prop, or token, it resolves from the **installed
   package** at use-time. The package is always more current than any copy.
 - Correctness comes from pointing at the real thing, not from remembering it.
+- Snapshots store rule counts and rule IDs; ignore files store rule and path signatures only.
+  Zero Fuselage values captured anywhere.
 
 How that holds up in practice — three live mechanisms, all reading the installed package:
 
@@ -40,15 +42,15 @@ it writes code) closes by running the gate.
 
 | Command | Group | What it does | Edits | Gate |
 |---|---|---|:---:|:---:|
-| `audit` | Evaluate | **Flagship.** Type + lint gate against the installed package, then a judgment pass; reports drift with file:line | no | yes |
-| `critique` | Evaluate | UX heuristic review — hierarchy, cognitive load, IA, a11y posture | no | no |
-| `shape` | Build | Plan a feature as a Fuselage component composition tree | no | no |
-| `craft` | Build | Shape, confirm, then build the feature end to end under the laws | yes | yes |
+| `audit` | Evaluate | **Flagship.** Type + lint gate against the installed package, then a judgment pass; reports drift with file:line. Scores 4 dimensions (0–4 each) → P0–P3 severity. Snapshots persist rule counts for trend tracking. | no | yes |
+| `critique` | Evaluate | UX heuristic review — hierarchy, cognitive load, IA, a11y posture. Snapshots persist per-feature slug with suppression support. | no | no |
+| `shape` | Build | Plan a feature as a Fuselage component composition tree. Enforces STOP after output (discovery interview only, no code). | no | no |
+| `craft` | Build | Shape confirmation required before code. Build the feature end to end under the laws, close with visual iteration loop and user-facing summary. | yes | yes |
 | `migrate` | Fix | Convert legacy / raw-CSS / hand-rolled UI into Fuselage + token refs (map by role, never by value) | yes | yes |
 | `upgrade` | Fix | Upgrade the installed Fuselage version across releases, fixing breaking changes hop-by-hop (type gate detects, resolver diff maps renames) | yes | yes |
 | `clarify` | Fix | Fix UX copy, labels, error and helper messages — words only, never values | yes | yes |
 | `adapt` | Fix | Make it responsive via `fuselage-hooks`, not media-query literals | yes | yes |
-| `polish` | Refine | Complete the states: loading, empty, error, hover, focus | yes | yes |
+| `polish` | Refine | Complete the states: loading, empty, error, hover, focus. Reads `latest.json` snapshot as P0 backlog. | yes | yes |
 | `harden` | Refine | Edge cases, i18n, RTL, a11y, error / disabled / loading paths | yes | yes |
 
 ```sh
@@ -144,6 +146,22 @@ the skill. See **[docs/cli.md](docs/cli.md)** for `fuselage-resolve` / `fuselage
 type-gate usage, and **[docs/eslint-plugin.md](docs/eslint-plugin.md)** for wiring the rules
 into your own ESLint config.
 
+## Snapshots & suppression
+
+Gate runs with `--snapshot` write a timestamped snapshot to `.fuselage-craft/audit/<ISO>.json`
+plus a `latest.json` copy. The snapshot captures rule counts (pre-suppression) for historical
+tracking and trend analysis. `polish` reads the latest snapshot as a P0 backlog. Inspect trends
+via `node src/audit-snapshot.mjs trend N`.
+
+Individual findings can be suppressed without code changes via `.fuselage-craft/ignore.md`
+(format: rule ID + path glob + optional line + required reason). Suppressed findings are
+logged for honesty. Bypass with `--no-ignore` to report all findings; exit code reflects
+effective count (post-filter), but the snapshot always stores raw results (pre-filter).
+
+`critique` persists per-feature snapshots via `--kind critique --slug <feature>`. Accepted
+critique findings live in `.fuselage-craft/critique-ignore.md` (per slug + category + optional
+substring match). Full reference in **[docs/cli.md](docs/cli.md)**.
+
 ## Keeping in sync with Fuselage
 
 The skill tracks Fuselage **automatically** — it holds no copy, so most releases need no action.
@@ -173,7 +191,7 @@ node test/run-tests.mjs       # lint rules still green
 | Path | What |
 |------|------|
 | [`adapters/claude-code/`](adapters/claude-code/) | The skill — `SKILL.md` (laws + router), `reference/` (per-command flows) |
-| `src/` | The engine — `resolve.mjs`, `eslint-plugin/`, `run-gate.mjs`, `typecheck.mjs` |
+| `src/` | The engine — `resolve.mjs`, `run-gate.mjs`, `typecheck.mjs`, `audit-snapshot.mjs`, `ignore-filter.mjs`, `critique-ignore.mjs`, `eslint-plugin/` |
 | `bin/` | The `fuselage-resolve` / `fuselage-gate` CLIs |
 | [`docs/`](docs/) | Engine reference — [CLI](docs/cli.md), [ESLint plugin](docs/eslint-plugin.md) |
 | `test/`, `fixtures/` | Rule test suites and a sample Fuselage-consuming fixture |

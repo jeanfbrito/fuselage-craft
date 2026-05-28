@@ -64,6 +64,12 @@ It catches two mistakes the type gate can miss in string positions:
   (use the bare `color='default'`); likewise `borderColor='stroke-…'`.
 - **Unknown token** — a color/bg/borderColor string that isn't in the installed palette.
 
+## Suppression
+
+Individual findings can be suppressed via `.fuselage-craft/ignore.md` without modifying code or adding inline `eslint-disable` comments. Suppression is applied at the gate layer (post-lint, pre-report), and the effective finding count drives the exit code. Raw findings (pre-suppression) are always captured in the snapshot for audit trail.
+
+See [`docs/cli.md`](cli.md) for the ignore format and `--no-ignore` flag to bypass suppression.
+
 ## Why value-free
 
 The structural rules never read a Fuselage value, so a Fuselage release can't break them and
