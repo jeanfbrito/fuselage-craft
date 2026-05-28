@@ -4,61 +4,61 @@
     {
       "name": "audit",
       "category": "Evaluate",
-      "purpose": "Flagship. Run the type + lint gate against the installed package; report drift (literal values, reinvented components, missing `Field`, props that don't typecheck), then a judgment pass.",
+      "purpose": "Flagship. Run gate with snapshot; score 4 dims (0–4 each) → P0–P3 severity; report drift with file:line; trend across last 3 snapshots; judgment pass; no edits.",
       "referenceFile": "reference/audit.md"
     },
     {
       "name": "migrate",
       "category": "Fix",
-      "purpose": "Convert legacy raw-CSS / hex / hand-rolled UI into Fuselage components + token references. Map by role, never by copying the old value.",
+      "purpose": "Convert legacy raw-CSS / hex / hand-rolled UI into Fuselage + token refs; map by role, not value; gate closes",
       "referenceFile": "reference/migrate.md"
     },
     {
       "name": "upgrade",
       "category": "Fix",
-      "purpose": "Upgrade the installed Fuselage version across releases, fixing breaking changes hop-by-hop with the gate as detector.",
+      "purpose": "Hop-by-hop version bump; gate detects breaks; resolver diff maps renames; checkpoint per hop",
       "referenceFile": "reference/upgrade.md"
     },
     {
       "name": "polish",
       "category": "Refine",
-      "purpose": "Final pass: loading (`Throbber`), errors (`Callout` / `FieldError`), empty states, focus, state completeness. No new literals.",
+      "purpose": "Final pre-ship pass: reads audit snapshot (STOP if missing); drains P0 backlog; re-runs gate + reads trend; code hygiene; visual rhythm.",
       "referenceFile": "reference/polish.md"
     },
     {
       "name": "harden",
       "category": "Refine",
-      "purpose": "Edge cases, i18n, RTL, error / disabled / loading paths, a11y, all through Fuselage.",
+      "purpose": "Production-readiness: edge cases, i18n, RTL, logical spacing, input validation, performance resilience, a11y — all through Fuselage; handoff to polish.",
       "referenceFile": "reference/harden.md"
     },
     {
       "name": "critique",
       "category": "Evaluate",
-      "purpose": "UX heuristics (hierarchy, cognitive load, IA). No code change, no gate.",
+      "purpose": "UX heuristic review: hierarchy, cognitive load, IA, affordances, a11y. HIGH/MED/LOW scored findings. Snapshot + suppression + trend. No code, no gate.",
       "referenceFile": "reference/critique.md"
     },
     {
       "name": "clarify",
       "category": "Fix",
-      "purpose": "UX copy, labels, error messages. Changes words, never Fuselage values.",
+      "purpose": "Fix UX copy: labels, button text, errors, helper text, empty states. STOP to confirm audience + mental state; NEVER list enforced; handoff to polish on green.",
       "referenceFile": "reference/clarify.md"
     },
     {
       "name": "adapt",
       "category": "Fix",
-      "purpose": "Responsive behavior via `fuselage-hooks`, not media-query literals.",
+      "purpose": "Replace literal media queries with `useBreakpoints`/`useMediaQuery`; source-context audit; logical spacing; honors `usePrefersReducedMotion`; handoff to polish.",
       "referenceFile": "reference/adapt.md"
     },
     {
       "name": "shape",
       "category": "Build",
-      "purpose": "Plan a feature as a Fuselage component composition tree. No code.",
+      "purpose": "Discovery interview (≥1 Q-round, STOP if ambiguous) + Fuselage composition tree + token/state plan. STOP after output — no product code.",
       "referenceFile": "reference/shape.md"
     },
     {
       "name": "craft",
       "category": "Build",
-      "purpose": "Shape, then build the feature end to end under the laws.",
+      "purpose": "Shape-confirm ≠ code-green (second STOP for token/state plan); build with Fuselage only — NEVER hand-roll; all states; gate closes; visual loop; user summary.",
       "referenceFile": "reference/craft.md"
     }
   ]

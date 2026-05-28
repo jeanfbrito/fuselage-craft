@@ -52,13 +52,14 @@ Fuselage-craft request under the laws defined in `SKILL.md`.
 | Command | Category | What it does |
 |---|---|---|
 | `audit` | Evaluate | Run gate with snapshot; 4-dim 0-4 rubric; re-run trend |
+| `upgrade` | Fix | Hop-by-hop version bump; gate detects breaks; resolver diff maps renames; checkpoint per hop |
 | `critique` | Evaluate | UX heuristic snapshot + suppression + trend; no gate, no edits |
 | `shape` | Build | Discovery interview + composition tree; STOP after output |
 | `craft` | Build | Shape-confirm ≠ code-green; visual iteration loop; user close |
-| `migrate` | Fix | Convert legacy raw-CSS / hex / hand-rolled UI |
+| `migrate` | Fix | Convert legacy raw-CSS / hex / hand-rolled UI into Fuselage + token refs; map by role, not value; gate closes |
 | `clarify` | Fix | Fix UX copy and labels; handoff to polish on green |
 | `adapt` | Fix | Make it responsive via fuselage-hooks; handoff to polish on green |
-| `polish` | Refine | Drain audit backlog (top-3 rules) + code hygiene |
+| `polish` | Refine | Final pre-ship pass: drains audit backlog, code hygiene, state completeness (loading/empty/error/hover/focus), visual rhythm. |
 | `harden` | Refine | Edge cases, i18n, RTL, a11y, input validation; handoff to polish |
 
 ## Snapshots, suppression, and trend

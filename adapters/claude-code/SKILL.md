@@ -131,16 +131,16 @@ above. Setup (below) runs first either way.
 
 | Command | Category | What it does | Reference |
 |---|---|---|---|
-| `audit` | Evaluate | Flagship. Run the type + lint gate against the installed package; report drift (literal values, reinvented components, missing `Field`, props that don't typecheck), then a judgment pass. | [reference/audit.md](reference/audit.md) |
-| `migrate` | Fix | Convert legacy raw-CSS / hex / hand-rolled UI into Fuselage components + token references. Map by role, never by copying the old value. | [reference/migrate.md](reference/migrate.md) |
-| `upgrade` | Fix | Upgrade the installed Fuselage version across releases, fixing breaking changes hop-by-hop with the gate as detector. | [reference/upgrade.md](reference/upgrade.md) |
-| `polish` | Refine | Final pass: loading (`Throbber`), errors (`Callout` / `FieldError`), empty states, focus, state completeness. No new literals. | [reference/polish.md](reference/polish.md) |
-| `harden` | Refine | Edge cases, i18n, RTL, error / disabled / loading paths, a11y, all through Fuselage. | [reference/harden.md](reference/harden.md) |
-| `critique` | Evaluate | UX heuristics (hierarchy, cognitive load, IA). No code change, no gate. | [reference/critique.md](reference/critique.md) |
-| `clarify` | Fix | UX copy, labels, error messages. Changes words, never Fuselage values. | [reference/clarify.md](reference/clarify.md) |
-| `adapt` | Fix | Responsive behavior via `fuselage-hooks`, not media-query literals. | [reference/adapt.md](reference/adapt.md) |
-| `shape` | Build | Plan a feature as a Fuselage component composition tree. No code. | [reference/shape.md](reference/shape.md) |
-| `craft` | Build | Shape, then build the feature end to end under the laws. | [reference/craft.md](reference/craft.md) |
+| `audit` | Evaluate | Flagship. Run gate with snapshot; score 4 dims (0–4 each) → P0–P3 severity; report drift with file:line; trend across last 3 snapshots; judgment pass; no edits. | [reference/audit.md](reference/audit.md) |
+| `migrate` | Fix | Convert legacy raw-CSS / hex / hand-rolled UI into Fuselage + token refs; map by role, not value; gate closes | [reference/migrate.md](reference/migrate.md) |
+| `upgrade` | Fix | Hop-by-hop version bump; gate detects breaks; resolver diff maps renames; checkpoint per hop | [reference/upgrade.md](reference/upgrade.md) |
+| `polish` | Refine | Final pre-ship pass: reads audit snapshot (STOP if missing); drains P0 backlog; re-runs gate + reads trend; code hygiene; visual rhythm. | [reference/polish.md](reference/polish.md) |
+| `harden` | Refine | Production-readiness: edge cases, i18n, RTL, logical spacing, input validation, performance resilience, a11y — all through Fuselage; handoff to polish. | [reference/harden.md](reference/harden.md) |
+| `critique` | Evaluate | UX heuristic review: hierarchy, cognitive load, IA, affordances, a11y. HIGH/MED/LOW scored findings. Snapshot + suppression + trend. No code, no gate. | [reference/critique.md](reference/critique.md) |
+| `clarify` | Fix | Fix UX copy: labels, button text, errors, helper text, empty states. STOP to confirm audience + mental state; NEVER list enforced; handoff to polish on green. | [reference/clarify.md](reference/clarify.md) |
+| `adapt` | Fix | Replace literal media queries with `useBreakpoints`/`useMediaQuery`; source-context audit; logical spacing; honors `usePrefersReducedMotion`; handoff to polish. | [reference/adapt.md](reference/adapt.md) |
+| `shape` | Build | Discovery interview (≥1 Q-round, STOP if ambiguous) + Fuselage composition tree + token/state plan. STOP after output — no product code. | [reference/shape.md](reference/shape.md) |
+| `craft` | Build | Shape-confirm ≠ code-green (second STOP for token/state plan); build with Fuselage only — NEVER hand-roll; all states; gate closes; visual loop; user summary. | [reference/craft.md](reference/craft.md) |
 
 ## Setup (every command, before work)
 

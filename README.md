@@ -48,10 +48,10 @@ it writes code) closes by running the gate.
 | `craft` | Build | Shape confirmation required before code. Build the feature end to end under the laws, close with visual iteration loop and user-facing summary. | yes | yes |
 | `migrate` | Fix | Convert legacy / raw-CSS / hand-rolled UI into Fuselage + token refs (map by role, never by value) | yes | yes |
 | `upgrade` | Fix | Upgrade the installed Fuselage version across releases, fixing breaking changes hop-by-hop (type gate detects, resolver diff maps renames) | yes | yes |
-| `clarify` | Fix | Fix UX copy, labels, error and helper messages — words only, never values | yes | yes |
-| `adapt` | Fix | Make it responsive via `fuselage-hooks`, not media-query literals | yes | yes |
-| `polish` | Refine | Complete the states: loading, empty, error, hover, focus. Reads `latest.json` snapshot as P0 backlog. | yes | yes |
-| `harden` | Refine | Edge cases, i18n, RTL, a11y, error / disabled / loading paths | yes | yes |
+| `clarify` | Fix | Fix UX copy: labels, button text, errors, helper text, empty states. STOP to confirm audience + mental state; NEVER list enforced; handoff to polish on green. | yes | yes |
+| `adapt` | Fix | Replace literal media queries with `useBreakpoints`/`useMediaQuery`; source-context audit; logical spacing; honors `usePrefersReducedMotion`; handoff to polish. | yes | yes |
+| `polish` | Refine | Final pre-ship pass: reads audit snapshot (STOP if missing); drains P0 backlog; re-runs gate + reads trend; code hygiene; visual rhythm. | yes | yes |
+| `harden` | Refine | Production-readiness: edge cases, i18n, RTL, logical spacing, input validation, performance resilience, a11y — all through Fuselage; handoff to polish. | yes | yes |
 
 ```sh
 /fuselage-craft audit src/**

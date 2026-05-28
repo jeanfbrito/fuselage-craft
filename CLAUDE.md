@@ -8,7 +8,7 @@ changing the repo safely.
 ## What it is
 
 The product is an **agent skill**: the Fuselage design skill for products that *consume*
-`@rocket.chat/fuselage` (audit / migrate / polish / craft / …). It is two halves:
+`@rocket.chat/fuselage` (audit / migrate / upgrade / polish / harden / critique / clarify / adapt / shape / craft). It is two halves:
 
 - **The skill** — [`adapters/claude-code/`](./adapters/claude-code/): `SKILL.md` (laws +
   command router) and `reference/<cmd>.md` (per-command flows). This is the product. Not
@@ -65,8 +65,7 @@ fontScale, or component name into this repo's logic or output.
 
 - **A lint rule** → rule file + its test + `run-tests.mjs` + the rule table in
   [`docs/eslint-plugin.md`](./docs/eslint-plugin.md) + the laws in `README.md` and `SKILL.md`.
-- **A command** → `SKILL.md` router table + `adapters/claude-code/reference/<cmd>.md` + the
-  command table in `README.md`.
+- **A command** → `SKILL.md` router table + adapters/claude-code/reference/<cmd>.md + command table in README.md + adapters/claude-code/README.md + adapters/claude-code/command-metadata.json (purpose field)
 - **A CLI flag or behavior** → [`docs/cli.md`](./docs/cli.md).
 - **A shipped file or runtime dep** → `package.json` `files` / `peerDependencies`.
 - **A snapshot schema field** (`src/audit-snapshot.mjs`) → `src/run-gate.mjs` (envelope assembly) + `adapters/claude-code/reference/audit.md` (rubric dims) + `adapters/claude-code/reference/polish.md` (backlog read) + `docs/cli.md` + `test/audit-snapshot.test.mjs`.
