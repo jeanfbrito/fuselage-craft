@@ -157,6 +157,12 @@ export default [
       // Warn (not error) — heuristic on <a>: real navigation links must not be false-flagged,
       // so we stay advisory. Raw <button> and clear <a>-as-button patterns are always caught.
       'fuselage-craft-gate/prefer-button': 'warn',
+      // Registered but no-op here — the live `deprecated` option is injected only by
+      // run-gate.mjs via resolveDeprecated(). Under standalone `npx eslint --config` this
+      // rule has no deprecated set and deliberately no-ops (never false-positives).
+      // The authoritative check is always via run-gate.mjs.
+      // Severity WARN: deprecated-but-valid is advisory; never fails the gate.
+      'fuselage-craft-gate/no-deprecated-fuselage-export': 'warn',
     },
   },
 ];

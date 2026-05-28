@@ -1407,6 +1407,136 @@ export async function reconcileCompanions() {
   }
 }
 
+// ─── Deprecated export detection ─────────────────────────────────────────────
+
+/**
+ * Pure function: given an array of exported component names, find all names
+ * that end with `Legacy` where the base name (suffix stripped) is also present.
+ *
+ * `SelectLegacy` + `Select` in the list → `SelectLegacy` is deprecated, prefer `Select`.
+ * `TopBarV2` alone or `TopBarV2` + `TopBar` → NOT flagged (V2 direction is ambiguous).
+ *
+ * Returns a sorted array of { name, replacement, reason }.
+ * Pure, no I/O, never throws.
+ *
+ * @param {string[]} exportNames
+ * @returns {{ name: string, replacement: string, reason: string }[]}
+ */
+export function findDeprecatedPairs(exportNames) {
+  const nameSet = new Set(exportNames);
+  const results = [];
+  for (const name of exportNames) {
+    if (!name.endsWith('Legacy')) continue;
+    const base = name.slice(0, -'Legacy'.length);
+    if (base.length === 0) continue;
+    if (nameSet.has(base)) {
+      results.push({
+        name,
+        replacement: base,
+        reason: 'legacy alias — prefer the base component',
+      });
+    }
+  }
+  results.sort((a, b) => a.name.localeCompare(b.name));
+  return results;
+}
+
+/**
+ * Resolve deprecated Fuselage exports by:
+ *   1. Finding `XLegacy` / `X` naming pairs in the live component exports.
+ *   2. Opportunistically scanning exported symbols' JSDoc deprecation markers
+ *      (best-effort; empty today, must never throw).
+ *
+ * Returns:
+ *   { status: 'ok'|'unavailable', reason?, data: [{name, replacement, reason}] }
+ *
+ * Never throws.
+ */
+export async function resolveDeprecated() {
+  try {
+    const compResult = await resolveComponents();
+    if (compResult.status !== 'ok' || !Array.isArray(compResult.data)) {
+      return {
+        status: 'unavailable',
+        reason: compResult.reason ?? `components resolver returned ${compResult.status}`,
+        data: [],
+      };
+    }
+
+    const exportNames = compResult.data;
+
+    // 1. Naming-pair detection (primary, reliable)
+    const pairResults = findDeprecatedPairs(exportNames);
+
+    // 2. JSDoc @deprecated scan (best-effort, best-available, must never throw)
+    const jsDocResults = [];
+    try {
+      const ts = loadTypeScript();
+      const entry = ts ? resolveTypesEntry('@rocket.chat/fuselage') : null;
+      const prog = entry ? getTsProgram(entry.path) : null;
+      if (prog) {
+        const { checker, sourceFile } = prog;
+        const exports = getExportedSymbols(checker, sourceFile);
+        for (const sym of exports) {
+          const name = sym.getName();
+          if (!/^[A-Z]/.test(name)) continue;
+          // Skip names already captured by pair detection
+          if (pairResults.some((p) => p.name === name)) continue;
+          try {
+            const tags = sym.getJsDocTags?.() ?? [];
+            const depTag = tags.find((t) => t.name === 'deprecated');
+            if (!depTag) continue;
+            // Try to extract a replacement from the tag text.
+            // Common forms: "Use {@link X}" or "Use X instead"
+            let replacement = null;
+            const tagText =
+              typeof depTag.text === 'string'
+                ? depTag.text
+                : Array.isArray(depTag.text)
+                  ? depTag.text.map((p) => (typeof p === 'string' ? p : p.text ?? '')).join('')
+                  : null;
+            if (tagText) {
+              // {@link X} form
+              const linkMatch = tagText.match(/\{@link\s+([A-Za-z_$][A-Za-z0-9_$]*)\s*\}/);
+              if (linkMatch) {
+                replacement = linkMatch[1];
+              } else {
+                // "use X" / "Use X" form
+                const useMatch = tagText.match(/\buse\s+([A-Z][A-Za-z0-9_$]*)\b/i);
+                if (useMatch) replacement = useMatch[1];
+              }
+            }
+            jsDocResults.push({
+              name,
+              replacement,
+              reason: '@deprecated',
+            });
+          } catch {
+            // skip this symbol — best-effort
+          }
+        }
+      }
+    } catch {
+      // JSDoc scan failed entirely — safe to ignore
+    }
+
+    // Merge, dedupe by name (pair results take precedence)
+    const seen = new Set(pairResults.map((p) => p.name));
+    const merged = [...pairResults];
+    for (const r of jsDocResults) {
+      if (!seen.has(r.name)) {
+        seen.add(r.name);
+        merged.push(r);
+      }
+    }
+    merged.sort((a, b) => a.name.localeCompare(b.name));
+
+    return { status: 'ok', data: merged };
+  } catch (err) {
+    return { status: 'unavailable', reason: `deprecated resolver error: ${err.message}`, data: [] };
+  }
+}
+
 // ─── Public API ───────────────────────────────────────────────────────────────
 
 /**
@@ -1433,6 +1563,8 @@ export async function resolveCategory(category) {
       return resolveForms();
     case 'hooks':
       return resolveHooks();
+    case 'deprecated':
+      return resolveDeprecated();
     case 'spacing':
       return {
         status: 'rule',
@@ -1604,6 +1736,32 @@ export async function main() {
   const args = process.argv.slice(2);
   const jsonMode = args.includes('--json');
   const categoryArg = args.find((a) => !a.startsWith('--')) || 'all';
+
+  // ── deprecated mode ────────────────────────────────────────────────────────
+  if (categoryArg === 'deprecated') {
+    const result = await resolveDeprecated();
+
+    if (jsonMode) {
+      process.stdout.write(JSON.stringify(result, null, 2) + '\n');
+      return;
+    }
+
+    process.stdout.write('═══ fuselage-craft deprecated exports ════════════════\n');
+    if (result.status === 'unavailable') {
+      process.stdout.write(`unavailable: ${result.reason}\n`);
+      return; // exit 0 (informational)
+    }
+    if (result.data.length === 0) {
+      process.stdout.write('no deprecated exports detected\n');
+    } else {
+      for (const { name, replacement, reason } of result.data) {
+        const replacementStr = replacement ? replacement : '(unknown — check Fuselage Storybook/docs)';
+        process.stdout.write(`  ${name} → ${replacementStr}  (${reason})\n`);
+      }
+    }
+    process.stdout.write('══════════════════════════════════════════════════════\n');
+    return; // exit 0 always (informational)
+  }
 
   // ── diff mode ──────────────────────────────────────────────────────────────
   if (categoryArg === 'diff') {

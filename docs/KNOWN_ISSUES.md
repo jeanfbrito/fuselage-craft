@@ -38,3 +38,21 @@ affected files, reference.
 - Workaround: same as above — runtime launch covers default exports and dynamic access.
 - Affected files: `src/resolve.mjs` (`resolveTypesEntry`, `reconcileCompanions` skip path).
 - Reference: verified May 2026 against @rocket.chat/icons (no types entry) + fuselage 0.78.0.
+
+## Deprecation signal is version-dependent and best-effort
+
+- Status: EXPECTED (inherent to the detection strategy).
+- Detail: `no-deprecated-fuselage-export` detects deprecated components via naming patterns
+  (`*Legacy` + base) and JSDoc `@deprecated` markers. JSDoc is stripped from shipped `.d.ts`
+  (≈0 occurrences observed), so detection relies primarily on `*Legacy`+base naming pairs. The
+  rule only fires when the installed version actually ships both a deprecated export (`*Legacy`)
+  and its current base. `*V2` is deliberately NOT auto-flagged (ambiguous promotion direction
+  causes false positives).
+- Why it is safe: a clean run of `no-deprecated-fuselage-export` does not guarantee zero
+  deprecated usage; it proves absence of the `*Legacy` pattern in that version only. Consult
+  the installed Fuselage's Storybook and docs for the authoritative list of current vs.
+  deprecated APIs.
+- Workaround: when auditing or upgrading, check both the gate output AND the Fuselage
+  Storybook/docs. Pair `grep '*Legacy'` with Fuselage's official deprecation notices.
+- Affected files: `src/eslint-plugin/no-deprecated-fuselage-export.mjs`, `adapters/claude-code/SKILL.md`.
+- Reference: verified May 2026 against @rocket.chat/fuselage 0.78.0.

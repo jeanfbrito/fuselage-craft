@@ -77,6 +77,7 @@ real component first:
 | Hand-rolled `<button>` / `<a>`-as-button / styled `<div>` button | `<Button primary\|secondary\|danger>` |
 | Hand-wired `<label>` + `<input>` | `<Field>` + `<FieldLabel>` + `<FieldRow>` |
 | Literal media query / breakpoint px | `useBreakpoints` / `useMediaQuery` |
+| Deprecated Fuselage export (e.g. `*Legacy` when the base exists) | the current base component (check the Fuselage Storybook/docs) |
 | Component / prop not in the installed types | surface as a Fuselage extension, don't hand-roll |
 | State conveyed by color alone | color + weight / icon / text |
 

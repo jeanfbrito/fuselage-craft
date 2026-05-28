@@ -1,7 +1,7 @@
 /**
  * ESLint plugin — fuselage-craft-gate
  *
- * Exposes the eight gate rules as a standard ESLint plugin object.
+ * Exposes the nine gate rules as a standard ESLint plugin object.
  * Import this in eslint.config.mjs via the local path.
  */
 
@@ -13,6 +13,7 @@ import requireFieldWrapper from './require-field-wrapper.mjs';
 import preferBox from './prefer-box.mjs';
 import preferButton from './prefer-button.mjs';
 import validColorToken from './valid-color-token.mjs';
+import noDeprecatedFuselageExport from './no-deprecated-fuselage-export.mjs';
 
 export default {
   meta: {
@@ -27,5 +28,6 @@ export default {
     'prefer-box': preferBox,
     'prefer-button': preferButton,
     'valid-color-token': validColorToken,
+    'no-deprecated-fuselage-export': noDeprecatedFuselageExport,
   },
 };

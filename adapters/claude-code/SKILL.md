@@ -80,6 +80,11 @@ installed package, not a copy:
 A change is not done until both pass. Report the version checked, the gate results, and
 any drift found.
 
+**Important:** A green gate is NECESSARY, NOT SUFFICIENT. It validates that symbols exist and
+that no literal values were used, but it cannot prove the *preferred*, non-deprecated component
+was chosen. For component-choice and deprecation questions, consult the installed Fuselage's
+**Storybook and docs** as the source of truth, and grep for `*Legacy` imports.
+
 ## Laws (the bans)
 
 | Forbidden | Use instead |
@@ -92,6 +97,7 @@ any drift found.
 | Hand-rolled `<button>` / styled `<div>` button | `<Button primary\|secondary\|danger\|...>` |
 | Hand-wired `<label>` + `<input>` | `<Field>` + `<FieldLabel>` + `<FieldRow>` |
 | Literal media query / breakpoint px | `useBreakpoints` / `useMediaQuery` |
+| Deprecated Fuselage export (e.g. `*Legacy` when the base exists) | the current base component (check the Fuselage Storybook/docs) |
 | Component/prop not in the installed types | nothing - see "When the system lacks it" |
 | State conveyed by color alone | color + weight / icon / text |
 

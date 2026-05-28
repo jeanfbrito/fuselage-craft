@@ -1,6 +1,6 @@
 # ESLint plugin reference
 
-The lint half of the [gate](cli.md). Eight **value-free** rules: they ban literal design-value
+The lint half of the [gate](cli.md). Nine **value-free** rules: they ban literal design-value
 patterns and enforce structural conventions — they hold no Fuselage values of their own.
 
 Wire them into your own flat config to get the structural rules in your editor and CI; run the
@@ -43,13 +43,20 @@ export default [
 | `prefer-box` | warn | Raw DOM elements (`div`, `span`, …) with inline `style={{}}` |
 | `prefer-button` | warn | Raw `<button>` or `<a>`-as-button (`href="#"`/`javascript:`, `onClick` without `href`, `role="button"`) — use Fuselage `<Button>` |
 | `valid-color-token` | error | Invalid / double-prefixed Fuselage color token names — **needs the live palette via [`fuselage-gate`](cli.md)** |
+| `no-deprecated-fuselage-export` | warn | A deprecated Fuselage import (`*Legacy` when the base exists) — **needs the live deprecated set via [`fuselage-gate`](cli.md)** |
+
+## Resolver-injected rules (`valid-color-token` and `no-deprecated-fuselage-export`)
+
+Both `valid-color-token` and `no-deprecated-fuselage-export` need live data from the installed
+Fuselage package, which `fuselage-gate` injects from `resolve.mjs` at run-time. Without their
+respective injected options they are complete **no-ops** — they never false-positive on a
+standalone `eslint` run.
 
 ## `valid-color-token` and the live palette
 
-`valid-color-token` is the one rule that needs Fuselage data: the live color palette, which
-`fuselage-gate` injects from `resolve.mjs` at run-time. Without an injected palette it is a
-complete **no-op** — it never false-positives on a standalone `eslint` run. That's why the
-config above leaves it `off` and you rely on `fuselage-gate` to enforce it.
+`valid-color-token` needs the live color palette injected as the `palette` option.
+Without it, it is a complete **no-op** — it never false-positives on a standalone `eslint` run.
+That's why the config above leaves it `off` and you rely on `fuselage-gate` to enforce it.
 
 It catches two mistakes the type gate can miss in string positions:
 

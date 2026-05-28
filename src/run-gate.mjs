@@ -89,9 +89,36 @@ async function loadLivePalette() {
   }
 }
 
+/**
+ * Load the live deprecated Fuselage export list from the resolver.
+ * This is passed as the `deprecated` option to the no-deprecated-fuselage-export
+ * rule so no Fuselage names are baked into the rule itself.
+ *
+ * Returns the deprecated data array on success, or null on failure (rule no-ops).
+ */
+async function loadLiveDeprecated() {
+  const resolverPath = pathToFileURL(join(GATE_DIR, 'resolve.mjs')).href;
+  try {
+    const { resolveDeprecated } = await import(resolverPath);
+    const result = await resolveDeprecated();
+    if (result.status === 'ok' && Array.isArray(result.data)) {
+      return result.data;
+    }
+    process.stderr.write(
+      `run-gate: resolver returned ${result.status} for deprecated: ${result.reason ?? ''}\n`,
+    );
+    return null;
+  } catch (err) {
+    process.stderr.write(
+      `run-gate: could not load deprecated list (${err.message}); no-deprecated-fuselage-export will no-op\n`,
+    );
+    return null;
+  }
+}
+
 // ─── Lint gate ────────────────────────────────────────────────────────────────
 
-async function runLintGate(fuselageControls, livePalette) {
+async function runLintGate(fuselageControls, livePalette, liveDeprecated) {
   // Build rule options for require-field-wrapper.
   // If we have a live control list, merge it with the raw-HTML defaults.
   const rawHtml = ['input', 'select', 'textarea'];
@@ -109,6 +136,9 @@ async function runLintGate(fuselageControls, livePalette) {
   }
   if (livePalette) {
     overrideRules['fuselage-craft-gate/valid-color-token'] = ['error', { palette: livePalette }];
+  }
+  if (liveDeprecated && liveDeprecated.length > 0) {
+    overrideRules['fuselage-craft-gate/no-deprecated-fuselage-export'] = ['warn', { deprecated: liveDeprecated }];
   }
 
   const overrideConfig = Object.keys(overrideRules).length > 0
@@ -251,8 +281,20 @@ if (livePalette) {
   );
 }
 
+// Load live deprecated export list for no-deprecated-fuselage-export (degrade gracefully)
+const liveDeprecated = await loadLiveDeprecated();
+if (liveDeprecated) {
+  process.stdout.write(
+    `resolver: loaded ${liveDeprecated.length} deprecated export${liveDeprecated.length !== 1 ? 's' : ''} for no-deprecated-fuselage-export\n`,
+  );
+} else {
+  process.stdout.write(
+    `resolver: could not load deprecated export list — no-deprecated-fuselage-export will no-op\n`,
+  );
+}
+
 process.stdout.write('─── Lint gate ───────────────────────────────────────\n');
-const { errors: lintErrors, warnings: lintWarnings } = await runLintGate(fuselageControls, livePalette);
+const { errors: lintErrors, warnings: lintWarnings } = await runLintGate(fuselageControls, livePalette, liveDeprecated);
 
 process.stdout.write(
   '\n─── Type gate ───────────────────────────────────────\n',

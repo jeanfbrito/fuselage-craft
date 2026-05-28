@@ -69,7 +69,7 @@ fontScale, or component name into this repo's logic or output.
 |------|------|
 | `adapters/claude-code/` | The skill — `SKILL.md` (laws + router), `reference/` (per-command flows) |
 | `src/resolve.mjs` | Live resolver — token/component/hook introspection via TS types |
-| `src/eslint-plugin/` | Eight value-free lint rules + `index.mjs` |
+| `src/eslint-plugin/` | Nine value-free lint rules + `index.mjs` |
 | `src/run-gate.mjs` | Gate driver — injects the live palette into `valid-color-token`; runs lint, type, and companion checks |
 | `src/typecheck.mjs` | `tsc --noEmit` wrapper against the consumer tsconfig |
 | `bin/` | `fuselage-resolve`, `fuselage-gate` CLIs |

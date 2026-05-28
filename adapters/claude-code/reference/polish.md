@@ -28,6 +28,8 @@ Polish passes are zero-breaking refines. The feature is already functional; now 
 
 Run `fuselage-gate <target>`. Type gate (tsc) and lint gate must both pass. Warnings are OK; errors are not. Done when green.
 
+**Remember:** the gate proves symbols exist and that no literal values were used, but cannot prove the *preferred*, non-deprecated component was chosen. When polishing, additionally check for `*Legacy` imports (the `no-deprecated-fuselage-export` rule flags these via fuselage-gate), and for ambiguous component choices, consult the installed Fuselage's Storybook + docs.
+
 ## Fuselage specifics
 
 Resolve the current vocabulary live: `fuselage-resolve components semantic fontscale spacing elevation radius`. Type gate is authoritative for spacing, elevation, radius. This pass polishes Button states (illustrative: loading, primary, disabled), Throbber, Callout, FieldError, and applies semantic color tokens and spacing rhythm.

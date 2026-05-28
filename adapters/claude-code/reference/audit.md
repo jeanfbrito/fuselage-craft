@@ -64,6 +64,8 @@ A structured conformance report (Sections A, B, C) plus the conformance summary 
 
 Audit IS the mechanical gate pass. Step 2 runs `run-gate.mjs` as its primary instrument. There is no separate "close with gate" step: the gate output becomes Section A of the report, and the exit code (nonzero on lint errors or tsc failure) is the conformance verdict. Audit makes no edits; it does not need to re-run the gate at the end.
 
+**Remember:** the gate is blind to component CHOICE and DEPRECATION — it proves existence + no literals, not "is this the API Fuselage wants now." So additionally: check for `*Legacy` imports (the `no-deprecated-fuselage-export` rule flags these when run via fuselage-gate), and for anything ambiguous about preferred component or variant, defer to the installed Fuselage's Storybook + docs rather than guessing.
+
 ## Fuselage specifics
 
 Resolve the current vocabulary live, do not recall it: `fuselage-resolve all`. The type gate validates anything type-only (elevation, radius, spacing). Examples below are illustrative, not a catalog. This command reasons about Box (color, bg, fontScale, spacing, elevation props), Button (variants, sizes, states), Field family for form structure, Callout, Throbber, and hooks like useBreakpoints for responsive detection.
