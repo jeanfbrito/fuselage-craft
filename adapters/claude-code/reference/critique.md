@@ -31,6 +31,37 @@ Each finding includes a recommendation that cites the Fuselage component or toke
 
 Optionally recommend running polish, harden, migrate, or clarify afterward depending on what you found.
 
+## Snapshot — persist findings
+
+After the heuristics scan, write a snapshot:
+
+```
+node src/audit-snapshot.mjs write --kind critique --slug <feature-slug> --input <findings.json>
+```
+
+Findings envelope:
+
+```json
+{ "lint": { "findings": [{ "ruleId": "<category>", "filePath": "<slug>", "line": 0, "messageId": "<short>", "severity": "warn" }] } }
+```
+
+Categories: `hierarchy`, `cognitive-load`, `ia`, `affordances`, `consistency`, `a11y`.
+
+Output: `.fuselage-craft/critique/<slug>/<ISO>.json` + `latest.json`.
+
+## Suppression
+
+Accepted findings live in `.fuselage-craft/critique-ignore.md` (format mirrors `ignore.md` but per slug+category, with optional `contains:` substring match):
+
+```markdown
+## <slug>
+- category: hierarchy
+  contains: "specific phrase from finding message"
+  reason: accepted — stylistic choice on this surface
+```
+
+Run `node src/critique-ignore.mjs .` to inspect entries. Suppression is applied before reporting; suppressed count is logged. `reason:` is required per entry — entries without it are skipped with a warning.
+
 ## No code, no gate
 
 This command writes nothing and runs no gate. Hand off findings to the product team or to craft/polish/harden for implementation.
@@ -38,3 +69,13 @@ This command writes nothing and runs no gate. Hand off findings to the product t
 ## Fuselage specifics
 
 Resolve the current vocabulary live: `fuselage-resolve components semantic fontscale`. This review reasons about Button for action hierarchy (illustrative: primary, secondary, danger), Field family for label pairing, Callout for alerts, Modal and Tabs for structure, fontScale for hierarchy, semantic color tokens, and hooks like useBreakpoints for responsiveness.
+
+## Close — re-run + trend
+
+Re-run critique after addressing findings.
+
+```
+node src/audit-snapshot.mjs trend 5 --kind critique --slug <slug>
+```
+
+Shows trajectory across the last 5 runs. Report per-category delta to the user; flag any category whose count went up (regression).

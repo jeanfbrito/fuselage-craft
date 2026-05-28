@@ -1,0 +1,65 @@
+{
+  "version": 1,
+  "commands": [
+    {
+      "name": "audit",
+      "category": "Evaluate",
+      "purpose": "Flagship. Run the type + lint gate against the installed package; report drift (literal values, reinvented components, missing `Field`, props that don't typecheck), then a judgment pass.",
+      "referenceFile": "reference/audit.md"
+    },
+    {
+      "name": "migrate",
+      "category": "Fix",
+      "purpose": "Convert legacy raw-CSS / hex / hand-rolled UI into Fuselage components + token references. Map by role, never by copying the old value.",
+      "referenceFile": "reference/migrate.md"
+    },
+    {
+      "name": "upgrade",
+      "category": "Fix",
+      "purpose": "Upgrade the installed Fuselage version across releases, fixing breaking changes hop-by-hop with the gate as detector.",
+      "referenceFile": "reference/upgrade.md"
+    },
+    {
+      "name": "polish",
+      "category": "Refine",
+      "purpose": "Final pass: loading (`Throbber`), errors (`Callout` / `FieldError`), empty states, focus, state completeness. No new literals.",
+      "referenceFile": "reference/polish.md"
+    },
+    {
+      "name": "harden",
+      "category": "Refine",
+      "purpose": "Edge cases, i18n, RTL, error / disabled / loading paths, a11y, all through Fuselage.",
+      "referenceFile": "reference/harden.md"
+    },
+    {
+      "name": "critique",
+      "category": "Evaluate",
+      "purpose": "UX heuristics (hierarchy, cognitive load, IA). No code change, no gate.",
+      "referenceFile": "reference/critique.md"
+    },
+    {
+      "name": "clarify",
+      "category": "Fix",
+      "purpose": "UX copy, labels, error messages. Changes words, never Fuselage values.",
+      "referenceFile": "reference/clarify.md"
+    },
+    {
+      "name": "adapt",
+      "category": "Fix",
+      "purpose": "Responsive behavior via `fuselage-hooks`, not media-query literals.",
+      "referenceFile": "reference/adapt.md"
+    },
+    {
+      "name": "shape",
+      "category": "Build",
+      "purpose": "Plan a feature as a Fuselage component composition tree. No code.",
+      "referenceFile": "reference/shape.md"
+    },
+    {
+      "name": "craft",
+      "category": "Build",
+      "purpose": "Shape, then build the feature end to end under the laws.",
+      "referenceFile": "reference/craft.md"
+    }
+  ]
+}

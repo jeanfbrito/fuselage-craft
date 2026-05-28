@@ -53,6 +53,13 @@ fontScale, or component name into this repo's logic or output.
    agent-only / type-gate-enforced. When you add a law, add the rule in the same change.
    Silent gaps ship drift past the gate (media-query and fake-link-button both slipped
    through this way).
+8. **Snapshot schema is frozen at v1 once shipped.** Schema changes bump version and add
+   migrator; never silently break `readTrend`. File: `src/audit-snapshot.mjs`. Schema covers
+   `version`, `timestamp`, `fuselageVersion`, `lintRulesCount`, `findings`, `typecheck`,
+   `companions`, `totals`.
+9. **Ignore entries require reason.** `.fuselage-craft/ignore.md` entries without `reason:`
+   are skipped + warned. The filter logs suppression count to stderr (honesty guard — never
+   silently drop findings).
 
 ## When you change X, also touch Y (doc fan-out)
 
@@ -62,6 +69,8 @@ fontScale, or component name into this repo's logic or output.
   command table in `README.md`.
 - **A CLI flag or behavior** → [`docs/cli.md`](./docs/cli.md).
 - **A shipped file or runtime dep** → `package.json` `files` / `peerDependencies`.
+- **A snapshot schema field** (`src/audit-snapshot.mjs`) → `src/run-gate.mjs` (envelope assembly) + `adapters/claude-code/reference/audit.md` (rubric dims) + `adapters/claude-code/reference/polish.md` (backlog read) + `docs/cli.md` + `test/audit-snapshot.test.mjs`.
+- **The ignore.md format** (`src/ignore-filter.mjs`) → `docs/cli.md` (suppression section) + `test/ignore-filter.test.mjs`.
 
 ## Layout
 
@@ -72,6 +81,8 @@ fontScale, or component name into this repo's logic or output.
 | `src/eslint-plugin/` | Nine value-free lint rules + `index.mjs` |
 | `src/run-gate.mjs` | Gate driver — injects the live palette into `valid-color-token`; runs lint, type, and companion checks |
 | `src/typecheck.mjs` | `tsc --noEmit` wrapper against the consumer tsconfig |
+| `src/audit-snapshot.mjs` | Snapshot writer + trend reader; writes `.fuselage-craft/audit/<ISO>.json` + `latest.json` |
+| `src/ignore-filter.mjs` | Parses `.fuselage-craft/ignore.md`; filters lint findings by `(rule, pathGlob, line?)` signature |
 | `bin/` | `fuselage-resolve`, `fuselage-gate` CLIs |
 | `docs/` | Engine reference — `cli.md`, `eslint-plugin.md` |
 | `test/`, `fixtures/consumer/` | Rule suites + a real Fuselage-consuming fixture |
@@ -84,4 +95,6 @@ cd fixtures/consumer && node ../../bin/fuselage-resolve.mjs all              # r
 cd fixtures/consumer && node ../../bin/fuselage-resolve.mjs check-companions # companion imports vs installed exports
 cd fixtures/consumer && node ../../bin/fuselage-gate.mjs 'src/good.tsx'     # PASS
 cd fixtures/consumer && node ../../bin/fuselage-gate.mjs 'src/bad.tsx'      # FAIL (gate catches drift)
+cd fixtures/consumer && node ../../bin/fuselage-gate.mjs 'src/bad.tsx' --snapshot   # FAIL + writes .fuselage-craft/audit/<iso>.json
+node ../../src/audit-snapshot.mjs latest --cwd .                                    # reads latest snapshot
 ```

@@ -6,6 +6,19 @@ Plan a feature as a Fuselage component composition tree before writing code. No 
 
 - Load the SKILL.md law layer. Confirm the installed @rocket.chat/fuselage version. Understand the feature intent, user flow, and context.
 
+## Discover first — required
+
+Before producing any composition tree, conduct ≥1 Q-round (2-3 questions per round, up to 3 rounds):
+
+- **Purpose** — what user job does this feature serve?
+- **Audience** — admin / end-user / power-user / first-time?
+- **Edge cases** — what fails / what's allowed / what's blocked?
+- **Scope cut** — what is explicitly OUT of this feature?
+
+Ask only what is not already obvious from the user's brief. If everything is obvious, skip and proceed; otherwise stop and wait for answers.
+
+Compose the tree only after the discovery answers are in.
+
 ## Flow
 
 1. **Decompose the UI.** Sketch the component tree. What is the top-level container (Page, Modal, Sidebar)? What are the child sections? What goes inside each (inputs, buttons, cards, lists)?
@@ -61,3 +74,15 @@ This command produces a design plan, not product code. When the user confirms th
 ## Fuselage specifics
 
 Resolve the current vocabulary live: `fuselage-resolve all`. Type gate is authoritative for spacing, elevation, radius. This plan uses Box for layout, Button for actions, Field family for inputs, Callout for messages, Modal/Tabs/Table for structure, Avatar/Tile for cards, Throbber for loading, hooks like useBreakpoints, and semantic tokens for color, spacing, type, depth, and corners.
+
+## STOP after shape
+
+Shape output is a **plan**, not a green light.
+
+After presenting the composition tree:
+
+- **HALT** — do NOT proceed to `craft`, do NOT write code
+- Ask the user to confirm the plan, modify, or hand off explicitly with `/craft`
+- Treat silence as "not yet confirmed"; do not infer approval
+
+This stop is non-negotiable. If the user invoked `/craft` directly (skipping `/shape`), follow craft.md's own shape-confirmation gate instead.

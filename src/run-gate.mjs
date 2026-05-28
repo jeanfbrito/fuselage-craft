@@ -7,9 +7,14 @@
  *   2. Type gate — spawns typecheck.mjs (which runs tsc --noEmit)
  *
  * Usage:
- *   fuselage-gate [globs...]
+ *   fuselage-gate [globs...] [--snapshot] [--no-ignore]
  *   node <repo>/bin/fuselage-gate.mjs [globs...]
  *   node <repo>/src/run-gate.mjs 'src/**\/*.{ts,tsx}'
+ *
+ * Flags:
+ *   --snapshot    Write a .fuselage-craft/audit/<iso>.json snapshot after the run.
+ *                 Also enabled by FUSELAGE_CRAFT_SNAPSHOT=1 env var.
+ *   --no-ignore   Skip the .fuselage-craft/ignore.md suppress filter.
  *
  * Exits nonzero if lint errors > 0 OR tsc exits nonzero.
  * Warnings do NOT fail the gate.
@@ -17,9 +22,12 @@
 
 import { ESLint } from 'eslint';
 import { spawn } from 'child_process';
+import { readFileSync } from 'fs';
 import { fileURLToPath, pathToFileURL } from 'url';
 import { dirname, resolve as pathResolve, relative, join } from 'path';
 import { argv, exit, cwd } from 'process';
+import { writeSnapshot } from './audit-snapshot.mjs';
+import { loadIgnore, filterFindings } from './ignore-filter.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -27,8 +35,25 @@ const __dirname = dirname(__filename);
 // GATE_DIR is the directory of this file (src/)
 const GATE_DIR = __dirname;
 
+// ─── CLI arg parsing ──────────────────────────────────────────────────────────
+
+const rawArgs = argv.slice(2);
+let enableSnapshot = process.env.FUSELAGE_CRAFT_SNAPSHOT === '1';
+let enableIgnore = true;
+const globArgs = [];
+
+for (const arg of rawArgs) {
+  if (arg === '--snapshot') {
+    enableSnapshot = true;
+  } else if (arg === '--no-ignore') {
+    enableIgnore = false;
+  } else {
+    globArgs.push(arg);
+  }
+}
+
 const DEFAULT_GLOBS = ['src/**/*.{ts,tsx}'];
-const targetGlobs = argv.slice(2).length > 0 ? argv.slice(2) : DEFAULT_GLOBS;
+const targetGlobs = globArgs.length > 0 ? globArgs : DEFAULT_GLOBS;
 
 // ─── Live Fuselage control list ───────────────────────────────────────────────
 
@@ -157,7 +182,7 @@ async function runLintGate(fuselageControls, livePalette, liveDeprecated) {
     results = await eslint.lintFiles(targetGlobs);
   } catch (err) {
     process.stderr.write(`Lint gate error: ${err.message}\n`);
-    return { errors: 1, warnings: 0 };
+    return { errors: 1, warnings: 0, rawResults: [], filesScanned: 0 };
   }
 
   // Honesty guard: a file OUTSIDE the cwd base path matches no flat-config block
@@ -204,7 +229,7 @@ async function runLintGate(fuselageControls, livePalette, liveDeprecated) {
     totalWarnings += result.warningCount;
   }
 
-  return { errors: totalErrors, warnings: totalWarnings };
+  return { errors: totalErrors, warnings: totalWarnings, rawResults: results, filesScanned: results.length };
 }
 
 // ─── Companion gate ───────────────────────────────────────────────────────────
@@ -294,7 +319,7 @@ if (liveDeprecated) {
 }
 
 process.stdout.write('─── Lint gate ───────────────────────────────────────\n');
-const { errors: lintErrors, warnings: lintWarnings } = await runLintGate(fuselageControls, livePalette, liveDeprecated);
+const { errors: lintErrors, warnings: lintWarnings, rawResults, filesScanned } = await runLintGate(fuselageControls, livePalette, liveDeprecated);
 
 process.stdout.write(
   '\n─── Type gate ───────────────────────────────────────\n',
@@ -335,21 +360,103 @@ if (companionResult.note) {
   );
 }
 
+// ─── Build result envelope (raw — pre-ignore) ─────────────────────────────────
+
+// Flatten all ESLint messages into the findings shape audit-snapshot expects.
+// severity: 1 = warn, 2 = error (ESLint convention, matches assembleSnapshot).
+const rawFindings = [];
+for (const r of rawResults) {
+  for (const msg of r.messages) {
+    rawFindings.push({
+      ruleId: msg.ruleId ?? null,
+      filePath: r.filePath,
+      line: msg.line ?? 0,
+      column: msg.column ?? 0,
+      messageId: msg.messageId ?? '',
+      severity: msg.severity,
+    });
+  }
+}
+
+const gateEnvelope = {
+  lint: { findings: rawFindings, filesScanned },
+  typecheck: typeExitCode !== 0 ? { errorCount: 1, files: [] } : null,
+  companions: companionStatus === 'missing' ? { missing: companionResult.missing ?? [] } : null,
+};
+
+// ─── Snapshot phase (raw, pre-ignore) ────────────────────────────────────────
+
+if (enableSnapshot) {
+  process.stdout.write('\n─── Snapshot ────────────────────────────────────────\n');
+
+  // Resolve installed @rocket.chat/fuselage version from the consumer's node_modules.
+  let fuselageVersion = null;
+  try {
+    const pkgJsonPath = join(cwd(), 'node_modules', '@rocket.chat', 'fuselage', 'package.json');
+    const pkgJson = JSON.parse(readFileSync(pkgJsonPath, 'utf-8'));
+    fuselageVersion = pkgJson.version ?? null;
+  } catch {
+    // not installed or unreadable — null is fine, assembleSnapshot accepts it
+  }
+
+  try {
+    const { path: snapshotPath } = await writeSnapshot(gateEnvelope, {
+      cwd: cwd(),
+      fuselageVersion,
+    });
+    process.stdout.write(`snapshot written: ${snapshotPath}\n`);
+  } catch (err) {
+    process.stderr.write(`run-gate: snapshot write failed: ${err.message}\n`);
+  }
+}
+
+// ─── Ignore filter ────────────────────────────────────────────────────────────
+
+// effectiveLintErrors / effectiveLintWarnings drive the exit code after filtering.
+let effectiveLintErrors = lintErrors;
+let effectiveLintWarnings = lintWarnings;
+
+if (enableIgnore) {
+  const ignore = loadIgnore(cwd());
+
+  for (const w of ignore.warnings) {
+    process.stderr.write(`[ignore] ${w}\n`);
+  }
+
+  if (ignore.entries.length > 0) {
+    const { kept, suppressed } = filterFindings(rawFindings, ignore);
+
+    if (suppressed.length > 0) {
+      process.stdout.write(
+        `\n[ignore] suppressed ${suppressed.length} finding(s) via .fuselage-craft/ignore.md\n`,
+      );
+
+      // Recompute error/warning counts from kept findings only.
+      effectiveLintErrors = 0;
+      effectiveLintWarnings = 0;
+      for (const f of kept) {
+        if (f.severity === 2) effectiveLintErrors++;
+        else effectiveLintWarnings++;
+      }
+    }
+  }
+}
+
 // ─── Summary ──────────────────────────────────────────────────────────────────
 
 process.stdout.write('\n═════════════════════════════════════════════════════\n');
 const typeStatus = typeExitCode === 0 ? 'PASS' : 'FAIL';
-const lintStatus = lintErrors > 0 ? 'FAIL' : 'PASS';
+const lintStatus = effectiveLintErrors > 0 ? 'FAIL' : 'PASS';
 const companionSummaryStatus =
   companionResult.note ? 'PASS' :
   companionStatus === 'ok' ? 'PASS' : companionStatus === 'missing' ? 'FAIL' : 'SKIP';
 
 process.stdout.write(`Type gate      : ${typeStatus}\n`);
 process.stdout.write(
-  `Lint gate      : ${lintStatus}  (${lintErrors} errors, ${lintWarnings} warnings)\n`,
+  `Lint gate      : ${lintStatus}  (${effectiveLintErrors} errors, ${effectiveLintWarnings} warnings)\n`,
 );
 process.stdout.write(`Companion gate : ${companionSummaryStatus}\n`);
 process.stdout.write('═════════════════════════════════════════════════════\n\n');
 
-const failed = lintErrors > 0 || typeExitCode !== 0 || companionStatus === 'missing';
+const failed = effectiveLintErrors > 0 || typeExitCode !== 0 || companionStatus === 'missing';
 exit(failed ? 1 : 0);

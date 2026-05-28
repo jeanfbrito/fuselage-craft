@@ -1,6 +1,7 @@
 node_modules/
 fixtures/consumer/node_modules/
 *.log
+.fuselage-craft/
 
 # GitNexus + agent tooling folders — global, never committed per-repo
 .gitnexus/

@@ -144,3 +144,118 @@ node /path/to/fuselage-craft/bin/fuselage-gate.mjs 'src/**/*.tsx'
 ```
 
 It exits nonzero on any lint error or type error, so it fails the job without extra wiring.
+
+## Snapshots
+
+Write a timestamped snapshot of the gate's raw findings (lint, type, companions) to `.fuselage-craft/audit/` for historical tracking and trend analysis.
+
+```sh
+fuselage-gate 'src/**/*.tsx' --snapshot
+# or
+FUSELAGE_CRAFT_SNAPSHOT=1 fuselage-gate 'src/**/*.tsx'
+```
+
+Output directory: `.fuselage-craft/audit/`
+
+Files written:
+- `<ISO>.json` — immutable timestamped snapshot (e.g. `2026-05-28T14:32:10Z.json`), kept indefinitely
+- `latest.json` — copy of the most recent snapshot, overwritten on each run
+
+### Snapshot schema (v1)
+
+```json
+{
+  "version": 1,
+  "timestamp": "2026-05-28T14:32:10Z",
+  "fuselageVersion": "0.32.0",
+  "lintRulesCount": {
+    "fuselage-craft-gate/no-raw-color": 3,
+    "fuselage-craft-gate/prefer-button": 1
+  },
+  "findings": [
+    {
+      "rule": "fuselage-craft-gate/no-raw-color",
+      "file": "src/legacy/old-banner.tsx",
+      "line": 42,
+      "column": 8,
+      "messageId": "literal-hex",
+      "severity": "error"
+    }
+  ],
+  "typecheck": {
+    "errorCount": 0,
+    "files": []
+  },
+  "companions": {
+    "missing": []
+  },
+  "totals": {
+    "errors": 3,
+    "warnings": 1,
+    "filesScanned": 12
+  }
+}
+```
+
+**Field reference:**
+- `version` — schema version (frozen to v1)
+- `timestamp` — ISO 8601 run timestamp
+- `fuselageVersion` — installed `@rocket.chat/fuselage` package version
+- `lintRulesCount` — count of findings per rule ID
+- `findings` — full ESLint message details (rule, file, line, column, messageId, severity)
+- `typecheck` — TypeScript `tsc --noEmit` result (errorCount, files with errors)
+- `companions` — companion reconciliation result (missing symbols)
+- `totals` — aggregate error/warning/file counts (pre-ignore filter)
+
+**Important:** snapshots store the **raw result** before the `--no-ignore` suppression filter is applied. This preserves ground truth for historical analysis.
+
+### Inspecting snapshots
+
+```sh
+node src/audit-snapshot.mjs latest          # read latest.json
+node src/audit-snapshot.mjs trend 5         # aggregate last 5 snapshots
+```
+
+## Suppression
+
+Suppress individual findings or file globs without modifying code. Create `.fuselage-craft/ignore.md` in your project root.
+
+```sh
+fuselage-gate 'src/**/*.tsx'              # respect ignore.md by default
+fuselage-gate 'src/**/*.tsx' --no-ignore  # skip ignore.md, report all findings
+```
+
+### Ignore file format
+
+```markdown
+# .fuselage-craft/ignore.md
+
+## fuselage-craft-gate/no-raw-color
+- path: src/legacy/old-banner.tsx
+  line: 42
+  reason: pinned surface until v25 upgrade
+
+## fuselage-craft-gate/prefer-button
+- path: src/legacy/*.tsx
+  reason: full legacy folder; tracked by ticket FOO-123
+```
+
+**Rules:**
+- Section header `## <rule-id>` — one rule per section (e.g. `fuselage-craft-gate/no-raw-color`)
+- `path` — file or glob pattern (`*` matches any single path segment, `**` matches any depth including `/`)
+- `line` — optional line number; if omitted, matches any line in the file
+- `reason` — required; explains why the finding is suppressed. Missing reason → entry skipped + warning to stderr
+
+**Example patterns:**
+- `src/legacy/old-banner.tsx` — exact file match
+- `src/legacy/*.tsx` — all `.tsx` files in `src/legacy/` (single depth)
+- `src/legacy/**/*.tsx` — all `.tsx` files in `src/legacy/` and subdirectories
+- `**/*.deprecated.tsx` — all `.deprecated.tsx` files anywhere
+
+When suppressions apply, the gate logs:
+
+```
+[ignore] suppressed 5 finding(s) via .fuselage-craft/ignore.md
+```
+
+Exit code reflects **effective** findings (post-filter). Snapshot always stores **raw** findings (pre-filter) for audit trail.

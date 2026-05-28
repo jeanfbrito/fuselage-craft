@@ -6,6 +6,16 @@ Responsive behavior via Fuselage hooks, not literal media queries. Replace hardc
 
 - Load the SKILL.md law layer. Confirm the installed @rocket.chat/fuselage version. Examine the installed `@rocket.chat/fuselage-hooks` export and breakpoint schema.
 
+## Source-context audit
+
+Identify what the existing design assumed:
+- Screen size baseline (mobile-first? desktop-first?)
+- Input method (touch / mouse / keyboard / mixed)
+- Connection assumption (online-always? offline-capable?)
+- Density assumption (sparse / dense / dashboard-grade)
+
+Write the inferred assumption set as a one-liner. If the *adapt target* (e.g. mobile) contradicts an assumption, that assumption is the cut line — restructure, do not just resize.
+
 ## Flow
 
 1. **Replace media query px.** Any `@media (min-width: 768px)` or hardcoded breakpoint becomes `useBreakpoints()` or `useMediaQuery()`. Read the hook signature from the installed package. Never hardcode breakpoint values.
@@ -26,6 +36,16 @@ Responsive behavior via Fuselage hooks, not literal media queries. Replace hardc
 
 Responsive behavior driven entirely by hooks and token names. No literal media query syntax. No hardcoded breakpoint px. Layouts adapt smoothly.
 
+## Verify on real surface
+
+Gate green is necessary, not sufficient. Before closing:
+- Open the feature on a real device of the target class (or browser devtools device emulation if no hardware available)
+- Rotate (portrait / landscape) — layout must not break
+- Confirm touch targets ≥ 44×44 dp via the Fuselage primitives in use
+- Confirm `usePrefersReducedMotion` consumers respect the OS setting
+
+Log a one-line confirmation per device tested before handing off.
+
 ## Close with the gate
 
 Run `fuselage-gate <target>`. Type gate and lint gate must pass. Warnings OK. Confirm no literal media queries remain. Done when green.
@@ -33,3 +53,7 @@ Run `fuselage-gate <target>`. Type gate and lint gate must pass. Warnings OK. Co
 ## Fuselage specifics
 
 Resolve the current vocabulary live: `fuselage-resolve hooks breakpoints`. This pass drives responsive behavior through hooks (illustrative: useBreakpoints for breakpoint flags, useMediaQuery for custom queries, usePrefersReducedMotion for motion preferences), Box responsive props, logical spacing, and semantic color tokens.
+
+## Close
+
+When adapt feels native per context AND gate is green, suggest `/polish` for state + rhythm pass. Do not run polish yourself.

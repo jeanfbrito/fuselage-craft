@@ -2,6 +2,15 @@
 
 Build a feature end to end under the laws. Shape first, then code using Fuselage components. Cover all states.
 
+## Shape confirmation is not code green
+
+A confirmed shape brief lets you **plan**, not **type**.
+Before writing code, confirm separately:
+- The **token + state plan** — which Fuselage tokens for color/spacing/elevation, which state coverage (idle/loading/error/empty/success)
+- The **component composition** — exact Fuselage component names per surface, verified against installed types via `fuselage-resolve`
+
+Treat any ambiguity in either as a second STOP. Ask the user; do not guess.
+
 ## Inherit first
 
 - Load the SKILL.md law layer. Confirm the installed @rocket.chat/fuselage version. Resolve every component, prop, and token from the package.
@@ -37,6 +46,26 @@ A complete, state-rich feature built entirely with Fuselage components and token
 
 Run `fuselage-gate <target>`. Type gate (`tsc --noEmit`) must pass (no type errors). Lint gate must pass (no raw hex, no literal px, no hand-rolled components, no missing Field wrappers). Warnings are OK; errors stop the build. Repeat until green. Then deploy.
 
+## Visual iteration loop
+
+Lint/type gate green is necessary, not sufficient. After gate passes:
+- Use the `verify` or `run` skill to launch the consumer app and navigate to the feature
+- Take a screenshot or browser snapshot of each state (idle / loading / error / empty / success)
+- Compare each shot to the shape plan: do component vocab, state coverage, and spacing rhythm match?
+- For any divergence, patch and re-gate. Repeat until shape and rendered surface agree
+
+If the consumer app cannot be launched in this environment, document the gap and flag for manual verification.
+
 ## Fuselage specifics
 
 Resolve the current vocabulary live: `fuselage-resolve all`. Type gate is authoritative for spacing, elevation, radius. This build uses Box for layout, Button for actions (illustrative: primary, secondary, danger variants), Field family for form structure, Callout for messages, Throbber for loading, and containers like Modal, Tabs, Table. Responsive behavior via hooks (illustrative: useBreakpoints, useMediaQuery, usePrefersReducedMotion). Semantic tokens (resolve the full set with resolve.mjs) for color, spacing on x* scale, fontScale, elevation, and borderRadius.
+
+## Close — present to user
+
+End with a structured walkthrough:
+- **What was built** — composition tree + state list (1-line each)
+- **What's covered** — gate green + states verified
+- **What's deferred** — anything outside scope; quote the shape brief's "out of scope" line if present
+- **Open question** — "Anything not working as you expected?"
+
+Do not close silently. The user is the final reviewer.

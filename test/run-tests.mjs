@@ -21,6 +21,9 @@ const suites = [
   './resolve-diff.test.mjs',
   './reconcile-companions.test.mjs',
   './no-deprecated-fuselage-export.test.mjs',
+  './audit-snapshot.test.mjs',
+  './ignore-filter.test.mjs',
+  './critique-ignore.test.mjs',
 ];
 
 let passed = 0;

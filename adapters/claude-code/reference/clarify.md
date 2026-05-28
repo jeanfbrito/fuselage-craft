@@ -2,6 +2,14 @@
 
 UX copy: labels, button text, error messages, helper text, empty-state copy, tooltips. Voice is plain, exact, i18n-friendly. Changes only strings, never Fuselage design values.
 
+## Before rewriting
+
+Confirm two facts first:
+- **Audience** — is the user an admin / end-user / power-user / first-time visitor? Copy register differs.
+- **Mental state at this point in flow** — is the user frustrated (error/empty), exploring (discovery), confirming (commit), or recovering (retry)?
+
+If either is ambiguous, ask before touching strings. Wrong-register copy is worse than untouched copy.
+
 ## Inherit first
 
 - Load the SKILL.md law layer. Confirm the installed @rocket.chat/fuselage version. Identify all user-facing strings in the feature.
@@ -26,9 +34,19 @@ UX copy: labels, button text, error messages, helper text, empty-state copy, too
 
 String changes only. No CSS, no component restructure, no design value changes. All changes are purely textual and localization-friendly.
 
-## Close with the gate
+## Never
 
-Run `fuselage-gate <target>`. Type gate (tsc) and lint gate must pass. Warnings OK. Confirm no unintended code drift occurred. Done when green.
+- Blame language (`you did X wrong` → `X was rejected`)
+- Jargon without explanation (`token expired` → `session ended — sign in again`)
+- Placeholder-as-only-label (`Enter email...` without a `<FieldLabel>` above; Fuselage `<Field>` already provides the slot)
+- Negative phrasing of positive outcomes (`is not invalid` → `is valid`)
+- Empty-state copy that scolds (`No items` → `Nothing here yet — <action to add one>`)
+
+## Close
+
+Run `fuselage-gate <target>`. Type gate (tsc) and lint gate must pass. Warnings OK. Confirm no unintended code drift occurred.
+
+When copy reads cleanly and gate passes, suggest `/polish` for state completeness + visual rhythm. Do not run polish yourself — clarify exits on copy clarity.
 
 ## Fuselage specifics
 
