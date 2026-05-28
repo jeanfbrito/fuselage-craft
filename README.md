@@ -1,3 +1,7 @@
+<p align="center">
+  <img width="600" alt="Project screenshot" src="https://github.com/user-attachments/assets/39b98596-e30c-4003-a828-fe62bc45cc6c" />
+</p>
+
 # fuselage-craft
 
 An **agent skill** for designing and refining UI in products that consume
