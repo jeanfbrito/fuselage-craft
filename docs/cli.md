@@ -27,6 +27,13 @@ fuselage-resolve inputs
 A category that can't be resolved reports `unavailable` rather than guessing — the type gate
 still enforces correctness, so the failure mode is safe.
 
+Pass multiple category names to resolve several in one run — each section prints in the given
+order (with `--json`, one object keyed by category name):
+
+```sh
+fuselage-resolve semantic components hooks
+```
+
 ## `fuselage-resolve check-companions`
 
 Reconciles the installed `@rocket.chat/fuselage`'s companion imports against the installed
@@ -209,11 +216,34 @@ Files written:
 
 **Important:** snapshots store the **raw result** before the `--no-ignore` suppression filter is applied. This preserves ground truth for historical analysis.
 
-### Inspecting snapshots
+### Inspecting snapshots — `fuselage-snapshot`
+
+`fuselage-snapshot` is the CLI entry point for `src/audit-snapshot.mjs` (snapshot reads/writes)
+plus ignore-file inspection.
 
 ```sh
-node src/audit-snapshot.mjs latest          # read latest.json
-node src/audit-snapshot.mjs trend 5         # aggregate last 5 snapshots
+fuselage-snapshot latest [--kind audit|critique] [--slug <slug>] [--cwd <dir>]
+fuselage-snapshot trend [N] [--kind audit|critique] [--slug <slug>] [--cwd <dir>]
+fuselage-snapshot write [--input <path>] [--kind audit|critique] [--slug <slug>] [--cwd <dir>]
+fuselage-snapshot ignore [--kind audit|critique] [--cwd <dir>]
+```
+
+- `latest` — print the most recent snapshot (`latest.json`)
+- `trend [N]` — print the last N snapshots (default 5), newest first
+- `write` — read a gate result from `--input <path>` (or stdin) and persist a new snapshot
+- `ignore` — print the parsed `.fuselage-craft/ignore.md` entries (kind=audit, default) or
+  `.fuselage-craft/critique-ignore.md` entries (kind=critique), including any warnings for
+  entries missing a required `reason`. `ignore` never takes `--slug` — both ignore files are
+  single project-root files, not slug-scoped.
+- `--kind critique` requires `--slug <slug>` for `latest`/`trend`/`write` (per the snapshot
+  storage layout under `.fuselage-craft/critique/<slug>/`)
+- `--cwd <dir>` — defaults to `process.cwd()`
+
+Running from source without a linked install:
+
+```sh
+node /path/to/fuselage-craft/bin/fuselage-snapshot.mjs latest
+node /path/to/fuselage-craft/bin/fuselage-snapshot.mjs trend 5
 ```
 
 ## Suppression

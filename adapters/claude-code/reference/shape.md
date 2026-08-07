@@ -4,7 +4,7 @@ Plan a feature as a Fuselage component composition tree before writing code. No 
 
 ## Inherit first
 
-- Load the SKILL.md law layer. Confirm the installed @rocket.chat/fuselage version. Understand the feature intent, user flow, and context.
+- Setup per SKILL.md has run: version pinned, vocabulary resolved live from the installed package — never memory.
 
 ## Discover first — required
 
@@ -25,7 +25,7 @@ Compose the tree only after the discovery answers are in.
 
 2. **Choose Fuselage components.** For each role in the tree, pick the right Fuselage component or Box with semantic props. Button for actions, Field/FieldLabel/FieldRow for inputs, Callout for messages, Tabs for navigation, Modal for overlays, Table for data, Avatar for identity, Tile for cards.
 
-3. **Token and prop plan.** For each component, decide the token names: color scheme (which semantic colors: `font-default`, `surface-tint`, `stroke-light`?). Spacing rhythm (padding/margin on x* scale). Type hierarchy (fontScale names). Elevation (depth via `elevation=`). BorderRadius (small/medium/large).
+3. **Token and prop plan.** For each component, decide the token names: color scheme (`color=` bare text token, `borderColor=` bare stroke token, `bg=` full `surface-*` name or bare — resolve real names with `fuselage-resolve semantic`). Spacing rhythm (padding/margin on x* scale, resolve with `fuselage-resolve spacing`). Type hierarchy (`fuselage-resolve fontscale`). Elevation (depth via `elevation=`, resolve with `fuselage-resolve elevation`). BorderRadius (resolve with `fuselage-resolve radius`).
 
 4. **State coverage.** List all states the feature must support: loading (via `Throbber` or Button `loading`), empty (custom empty state with `Callout` or icon), error (via `Callout` or `FieldError`), disabled (via component prop), success (via `Callout type='success'` or check icon). Do not leave any state blank.
 
@@ -37,7 +37,7 @@ Compose the tree only after the discovery answers are in.
 
 ## Output
 
-A clear composition plan in text or diagrams. Example:
+A clear composition plan in text or diagrams. Example (illustrative — resolve real names live):
 
 ```
 <Modal>

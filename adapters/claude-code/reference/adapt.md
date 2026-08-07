@@ -4,7 +4,8 @@ Responsive behavior via Fuselage hooks, not literal media queries. Replace hardc
 
 ## Inherit first
 
-- Load the SKILL.md law layer. Confirm the installed @rocket.chat/fuselage version. Examine the installed `@rocket.chat/fuselage-hooks` export and breakpoint schema.
+- Setup per SKILL.md has run: version pinned, vocabulary resolved live from the installed package — never memory.
+- Examine the installed `@rocket.chat/fuselage-hooks` export and breakpoint schema.
 
 ## Source-context audit
 
@@ -20,11 +21,11 @@ Write the inferred assumption set as a one-liner. If the *adapt target* (e.g. mo
 
 1. **Replace media query px.** Any `@media (min-width: 768px)` or hardcoded breakpoint becomes `useBreakpoints()` or `useMediaQuery()`. Read the hook signature from the installed package. Never hardcode breakpoint values.
 
-2. **useBreakpoints hook.** Returns an object with boolean flags for each breakpoint (xs, sm, md, lg, xl). Use it to conditionally render or apply Box props. Example: `const { lg } = useBreakpoints(); return <Box p={lg ? 'x24' : 'x16'}>...</Box>`.
+2. **useBreakpoints hook.** Read its actual signature and return shape from the installed `.d.ts` before using it — run `fuselage-resolve hooks breakpoints` and check the installed types. Do not assume a shape from memory. Use the result to conditionally render or drive Box props.
 
 3. **useMediaQuery hook.** For custom media queries that don't fit standard breakpoints (e.g., aspect ratio, pointer-hover). Pass a media query string; get a boolean.
 
-4. **Responsive Box props.** Box accepts responsive arrays on certain props (p, m, gap, etc.). Use them instead of nested ternaries. Confirm syntax from the installed types.
+4. **Responsive Box props.** Box props are plain CSS-typed, not responsive arrays. Check the installed Box types for how each prop accepts values, and drive layout differences across breakpoints via hook-conditional props (e.g. compute the prop value from `useBreakpoints()` / `useMediaQuery()` before passing it to Box).
 
 5. **usePrefersReducedMotion.** If the design has motion (e.g., slide-in, fade, spin), honor `usePrefersReducedMotion()` and skip or soften the animation. Respect user preferences.
 

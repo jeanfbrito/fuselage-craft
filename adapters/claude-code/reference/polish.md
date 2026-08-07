@@ -4,7 +4,7 @@ Final quality pass before shipping. Complete all states, tighten spacing rhythm,
 
 ## Inherit first
 
-- Load the SKILL.md law layer. Confirm the installed @rocket.chat/fuselage version. Resolve every component/prop/token from the installed package, never memory.
+- Setup per SKILL.md has run: version pinned, vocabulary resolved live from the installed package — never memory.
 
 ## Backlog from latest audit
 
@@ -16,7 +16,7 @@ Group findings by file. For each file in a P0 group, fix each violation via Fuse
 
 Re-run the gate with `--snapshot`. The new snapshot must show ≤ prior counts for every fixed rule.
 
-Read trend across last 3 snapshots and report the per-rule delta to the user.
+Read trend across last 3 snapshots via `fuselage-snapshot trend 3 --cwd <path>` and report the per-rule delta to the user.
 
 ### When backlog is empty
 
@@ -37,7 +37,7 @@ Hygiene gate runs via the existing lint pass — if your IDE-on-save adds debug 
 
 1. **States.** For every interactive element, add: loading state (`Button loading` or `Throbber`); empty state with contextual copy; error state (`Callout` or `FieldError` for inputs); disabled state; hover and focus-visible. Nothing should disappear or become broken when in a non-happy-path state.
 
-2. **Spacing rhythm.** Walk the layout and verify all padding, margin, gap use the `x*` scale (x4, x8, x12, x16, x24, x32). Tighten any jagged gaps. Use logical props: `pi`, `pb`, `mi`, `mb` (never left/right/top/bottom). No literal px anywhere.
+2. **Spacing rhythm.** Walk the layout and verify all padding, margin, gap use the `x*` scale — resolve the real scale live with `fuselage-resolve spacing` (illustrative only: `x16`). Tighten any jagged gaps. Use logical props: `pi`, `pb`, `mi`, `mb` (never left/right/top/bottom). No literal px anywhere.
 
 3. **Type hierarchy.** Check `fontScale=` names match weight and context: h1/h2/h3 for headers, p1/p2 for body, micro for footnotes. Use the Fuselage stories to confirm the idiom.
 
@@ -55,8 +55,8 @@ Polish passes are zero-breaking refines. The feature is already functional; now 
 
 Run `fuselage-gate <target>`. Type gate (tsc) and lint gate must both pass. Warnings are OK; errors are not. Done when green.
 
-**Remember:** the gate proves symbols exist and that no literal values were used, but cannot prove the *preferred*, non-deprecated component was chosen. When polishing, additionally check for `*Legacy` imports (the `no-deprecated-fuselage-export` rule flags these via fuselage-gate), and for ambiguous component choices, consult the installed Fuselage's Storybook + docs.
+**Remember:** the gate proves symbols exist and that no literal values were used, but cannot prove the *preferred*, non-deprecated component was chosen. When polishing, additionally run `fuselage-resolve deprecated` (lists deprecated exports with their replacements; the `no-deprecated-fuselage-export` rule also flags these via fuselage-gate), and for ambiguous component choices, consult the installed Fuselage's Storybook + docs.
 
 ## Fuselage specifics
 
-Resolve the current vocabulary live: `fuselage-resolve components semantic fontscale spacing elevation radius`. Type gate is authoritative for spacing, elevation, radius. This pass polishes Button states (illustrative: loading, primary, disabled), Throbber, Callout, FieldError, and applies semantic color tokens and spacing rhythm.
+Resolve the current vocabulary live: `fuselage-resolve components semantic fontscale`. Type gate is authoritative for spacing, elevation, radius — no need to resolve those categories here. This pass polishes Button states (illustrative: loading, primary, disabled), Throbber, Callout, FieldError, and applies semantic color tokens and spacing rhythm.

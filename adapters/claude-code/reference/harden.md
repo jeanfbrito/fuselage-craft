@@ -4,7 +4,7 @@ Production-readiness. Cover edge cases, i18n, RTL, error paths, all through Fuse
 
 ## Inherit first
 
-- Load the SKILL.md law layer. Confirm the installed @rocket.chat/fuselage version. Resolve every component/prop/token from the installed package, never memory.
+- Setup per SKILL.md has run: version pinned, vocabulary resolved live from the installed package — never memory.
 
 ## Flow
 
@@ -38,4 +38,4 @@ Resolve the current vocabulary live: `fuselage-resolve components forms hooks se
 
 ## Close
 
-When edge cases covered and gate green, hand off to `/polish` for state + visual rhythm pass.
+When edge cases covered and gate green, suggest `/polish` for state + visual rhythm pass. Do not run polish yourself.

@@ -19,7 +19,8 @@
   },
   "bin": {
     "fuselage-resolve": "./bin/fuselage-resolve.mjs",
-    "fuselage-gate": "./bin/fuselage-gate.mjs"
+    "fuselage-gate": "./bin/fuselage-gate.mjs",
+    "fuselage-snapshot": "./bin/fuselage-snapshot.mjs"
   },
   "scripts": {
     "test": "node test/run-tests.mjs",

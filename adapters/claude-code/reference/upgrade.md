@@ -6,8 +6,7 @@ rename oracle, committing a green checkpoint per hop.
 
 ## Inherit first
 
-- Load the SKILL.md law layer. Confirm the installed `@rocket.chat/fuselage` version. Resolve
-  every component, prop, and token from the installed package, never memory.
+- Setup per SKILL.md has run: version pinned, vocabulary resolved live from the installed package — never memory.
 
 ## Core insight
 
@@ -124,18 +123,26 @@ Capture full output. Every type error and lint error is a broken site caused by 
 commit a checkpoint:
 
 ```sh
-git add package.json package-lock.json src   # the bump + the migrated call sites
+git add package.json package-lock.json <files this hop's fix pass actually modified>
 git commit -m "chore(deps): fuselage <from>→<to> + migrate breaking changes"
 ```
+
+Stage exactly the paths this hop touched — list them from the hop's own fix log, never assume
+a directory wholesale (e.g. `src`).
 
 Keep or grow the stride for the next iteration.
 
 **Error storm / install conflict / unintelligible:** Roll back to the last checkpoint:
 
 ```sh
-git checkout package.json package-lock.json   # or git reset --hard HEAD if nothing committed yet
+git restore package.json package-lock.json
+git restore <the source files this hop's fix pass modified, from its own fix log>
 npm install
 ```
+
+Never use `git reset --hard` — it can destroy uncommitted work outside this hop. If nothing has
+been committed yet for this hop, `git restore` on the exact modified files is still the correct,
+scoped rollback.
 
 Halve the stride. Retry from step 1. Reduce to a stride of one (single minor) when the errors
 remain dense — this is expected in regions of high churn.

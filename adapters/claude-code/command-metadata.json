@@ -4,7 +4,7 @@
     {
       "name": "audit",
       "category": "Evaluate",
-      "purpose": "Flagship. Run gate with snapshot; score 4 dims (0–4 each) → P0–P3 severity; report drift with file:line; trend across last 3 snapshots; judgment pass; no edits.",
+      "purpose": "Flagship. Run gate with snapshot; score 4 dims by density (0–4 each) → P0–P3 severity; report drift with file:line; trend across last 3 snapshots; judgment pass; no edits.",
       "referenceFile": "reference/audit.md"
     },
     {

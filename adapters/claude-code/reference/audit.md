@@ -4,9 +4,7 @@ Flagship conformance command. Runs the mechanical gate, then a judgment pass. Re
 
 ## Inherit first
 
-- Load the SKILL.md law layer before doing anything else.
-- Read the consumer's `package.json` and lockfile; confirm the installed `@rocket.chat/fuselage*` version. State it.
-- Resolve every component, prop, and token reference from the installed package (`node_modules/@rocket.chat/fuselage*` types, token JSON, exports). Never use memory.
+- Setup per SKILL.md has run: version pinned, vocabulary resolved live from the installed package — never memory.
 
 ## Flow
 
@@ -16,21 +14,10 @@ Flagship conformance command. Runs the mechanical gate, then a judgment pass. Re
    ```
    fuselage-gate <target> --snapshot
    ```
-   This writes `.fuselage-craft/audit/<iso>.json` with lint findings and rule counts. Capture the gate output. Two categories:
+   This writes `.fuselage-craft/audit/<iso>.json` with lint findings and rule counts. Capture the gate output. The gate output enumerates every rule finding by name — do not re-list rule IDs here; group what it reports into two kinds of check:
 
-   - **Lint drift** (rules: `no-raw-color`, `no-literal-dimension`, `no-literal-shadow`, `require-field-wrapper` [error], `prefer-box` [warn]):
-     - Literal color values in product code (hex, rgb, hsl, named CSS colors)
-     - Literal dimension values (px, rem, em used directly for spacing, font-size, border-radius, box-shadow)
-     - Inputs not wrapped in a `Field` / `FieldLabel` / `FieldRow` structure
-     - Raw styled DOM where a Fuselage component ships (`<button>`, `<div>` standing in for `<Button>`, `<Modal>`, etc.)
-     - Inline `style=` props carrying design values
-
-   - **Type drift** (tsc `--noEmit` against installed Fuselage types):
-     - `fontScale=` value not in the installed union (typo, stale name, invented value)
-     - Nonexistent component imported from `@rocket.chat/fuselage*`
-     - `color=` or `bg=` token name not in the installed type
-     - `Button` used with a `variant=` string prop instead of boolean flags (`primary`, `secondary`, `danger`, `success`, `warning`)
-     - Any other JSX prop that fails the installed type contract
+   - **Lint drift** — everything the lint rules catch: literal design values (color, dimension, shadow), inputs not wrapped in `Field`, raw styled DOM standing in for a Fuselage component, deprecated exports, and any other rule the gate ran.
+   - **Type drift** — everything `tsc --noEmit` catches against the installed Fuselage types: invalid prop values, nonexistent components, token names not in the installed type, and any other JSX prop that fails the installed type contract.
 
    After the gate runs, **read the snapshot** from `.fuselage-craft/audit/<iso>.json`. Extract `lintRulesCount` to compute the rubric score (see Section below).
 
@@ -66,7 +53,7 @@ A structured conformance report (Sections A, B, C) plus the conformance summary 
 
 Audit IS the mechanical gate pass. Step 2 runs `run-gate.mjs` as its primary instrument. There is no separate "close with gate" step: the gate output becomes Section A of the report, and the exit code (nonzero on lint errors or tsc failure) is the conformance verdict. Audit makes no edits; it does not need to re-run the gate at the end.
 
-**Remember:** the gate is blind to component CHOICE and DEPRECATION — it proves existence + no literals, not "is this the API Fuselage wants now." So additionally: check for `*Legacy` imports (the `no-deprecated-fuselage-export` rule flags these when run via fuselage-gate), and for anything ambiguous about preferred component or variant, defer to the installed Fuselage's Storybook + docs rather than guessing.
+**Remember:** the gate is blind to component CHOICE — it proves existence + no literals, not "is this the API Fuselage wants now." So additionally: run `fuselage-resolve deprecated` (lists deprecated exports with their replacements; the `no-deprecated-fuselage-export` rule also flags these via fuselage-gate), and for anything ambiguous about preferred component or variant, defer to the installed Fuselage's Storybook + docs rather than guessing.
 
 ## Fuselage specifics
 
@@ -74,13 +61,15 @@ Resolve the current vocabulary live, do not recall it: `fuselage-resolve all`. T
 
 ## Scoring rubric
 
-After the mechanical pass, compute a conformance score using the snapshot's `lintRulesCount` field. Score across four dimensions, 0–4 each (total /16). For each dimension, count total findings across its rules:
+After the mechanical pass, compute a conformance score using the snapshot's `lintRulesCount` field. Score across four dimensions, 0–4 each (total /16). For each dimension, compute **density** = (findings across its rules) / (files scanned in the target, from the gate run / snapshot `totals.filesScanned`):
 
-- Score `0` if ≥10 findings
-- Score `1` if 5–9 findings
-- Score `2` if 2–4 findings
-- Score `3` if 1 finding
-- Score `4` if 0 findings
+- Score `0` if density ≥ 1.0
+- Score `1` if density ≥ 0.5
+- Score `2` if density ≥ 0.2
+- Score `3` if density > 0
+- Score `4` if density is 0
+
+Density makes scores comparable across targets of any size — thresholds live only here.
 
 **Dimensions:**
 
@@ -96,9 +85,13 @@ After the mechanical pass, compute a conformance score using the snapshot's `lin
 - **5–8** = **P1** (significant drift, plan a polish pass)
 - **0–4** = **P0** (large drift, migrate / harden required)
 
-## Close — re-run + delta
+## Audit's own close
 
-After applying any fixes flagged in the rubric / judgment pass, **re-run** `fuselage-gate <target> --snapshot`.
-Read `.fuselage-craft/audit/latest.json` and the prior snapshot via `node src/audit-snapshot.mjs trend 2 --cwd <path>`.
+Audit makes no edits: its close is the report (Sections A, B, C) plus the conformance summary line above. Stop there unless the user asked audit to also fix, or this report is feeding directly into a fix command afterward.
+
+## Conditional close — only if fixes were applied afterward
+
+If the user asked audit to also fix findings, or a fix command (`migrate`/`polish`/`harden`/`adapt`) ran against this report and you're closing that loop: **re-run** `fuselage-gate <target> --snapshot`.
+Read `.fuselage-craft/audit/latest.json` and the prior snapshots via `fuselage-snapshot trend 3 --cwd <path>`.
 Report to the user the per-rule delta for each `lintRulesCount` key that changed; flag any regressions (count went up).
 If `findings[]` length is 0 and `companions.missing` is empty, close with: `audit clean. trend: <delta summary>`.

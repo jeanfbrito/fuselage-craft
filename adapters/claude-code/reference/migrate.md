@@ -4,7 +4,7 @@ Convert legacy or non-Fuselage UI into Fuselage components and token references.
 
 ## Inherit first
 
-- Load the SKILL.md law layer. Confirm the installed @rocket.chat/fuselage version. Resolve every component, prop, and token from the installed package, never memory.
+- Setup per SKILL.md has run: version pinned, vocabulary resolved live from the installed package — never memory.
 
 ## Flow
 
@@ -47,7 +47,7 @@ Migrated source files plus a migration summary table listing every legacy constr
 
 ## Close with the gate
 
-Run `fuselage-gate [globs]` against all modified files. Fix every lint error (no-raw-color, no-literal-dimension, no-literal-shadow, require-field-wrapper, prefer-box) and every TypeScript error from `tsc --noEmit`. Warnings do not fail the gate; errors do. Do not mark migration complete until the gate exits zero.
+Run `fuselage-gate [globs]` against all modified files. Fix every lint ERROR and every TypeScript error from `tsc --noEmit` — the gate's exit code is the authority. Lint warnings do not fail the gate; do not treat them as blocking. Do not mark migration complete until the gate exits zero.
 
 ## Fuselage specifics
 

@@ -278,7 +278,7 @@ function parseSlugFlag(argv) {
   return parseFlagValue(argv, '--slug') ?? undefined;
 }
 
-async function main(argv) {
+export async function main(argv) {
   const [cmd, ...rest] = argv;
   const cwd = parseCwdFlag(rest);
   const kind = parseKindFlag(rest);

@@ -4,7 +4,7 @@ description: >-
   Design and refine UI in products that CONSUME @rocket.chat/fuselage. Use when working
   on a downstream app's components, screens, forms, dashboards, settings, onboarding, or
   empty states and you want the result to stay on the Fuselage design system. Commands:
-  audit, migrate, polish, harden, critique, clarify, adapt, shape, craft. Every command
+  audit, migrate, upgrade, polish, harden, critique, clarify, adapt, shape, craft. Every command
   treats the installed Fuselage packages as the single source of truth and never copies a
   Fuselage value. Not for authoring Fuselage itself.
 ---
@@ -83,7 +83,8 @@ any drift found.
 **Important:** A green gate is NECESSARY, NOT SUFFICIENT. It validates that symbols exist and
 that no literal values were used, but it cannot prove the *preferred*, non-deprecated component
 was chosen. For component-choice and deprecation questions, consult the installed Fuselage's
-**Storybook and docs** as the source of truth, and grep for `*Legacy` imports.
+**Storybook and docs** as the source of truth, and run `fuselage-resolve deprecated` (lists
+deprecated exports with their replacements).
 
 ## Laws (the bans)
 
@@ -131,7 +132,7 @@ above. Setup (below) runs first either way.
 
 | Command | Category | What it does | Reference |
 |---|---|---|---|
-| `audit` | Evaluate | Flagship. Run gate with snapshot; score 4 dims (0–4 each) → P0–P3 severity; report drift with file:line; trend across last 3 snapshots; judgment pass; no edits. | [reference/audit.md](reference/audit.md) |
+| `audit` | Evaluate | Flagship. Run gate with snapshot; score 4 dims by density (0–4 each) → P0–P3 severity; report drift with file:line; trend across last 3 snapshots; judgment pass; no edits. | [reference/audit.md](reference/audit.md) |
 | `migrate` | Fix | Convert legacy raw-CSS / hex / hand-rolled UI into Fuselage + token refs; map by role, not value; gate closes | [reference/migrate.md](reference/migrate.md) |
 | `upgrade` | Fix | Hop-by-hop version bump; gate detects breaks; resolver diff maps renames; checkpoint per hop | [reference/upgrade.md](reference/upgrade.md) |
 | `polish` | Refine | Final pre-ship pass: reads audit snapshot (STOP if missing); drains P0 backlog; re-runs gate + reads trend; code hygiene; visual rhythm. | [reference/polish.md](reference/polish.md) |
@@ -144,6 +145,11 @@ above. Setup (below) runs first either way.
 
 ## Setup (every command, before work)
 
+0. Verify `fuselage-resolve` and `fuselage-gate` are reachable (`npx`, a project devDep, or a
+   linked toolkit path). If neither resolves, **HALT** and give the user the install
+   instructions from [`adapters/claude-code/README.md`](README.md) ("Add the toolkit as a
+   project devDep…"). Never proceed from memory — a degraded run without live resolution
+   defeats the skill's purpose.
 1. Confirm the repo consumes `@rocket.chat/fuselage`; read installed version(s). If not
    installed, stop — this skill does not apply.
 2. Load product intent: `PRODUCT.md` if present (register, users, principles). The token

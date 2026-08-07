@@ -4,7 +4,8 @@ UX design review via heuristics. Does not write code or run the gate. Produce fi
 
 ## Inherit first
 
-- Load the SKILL.md law layer. Confirm the installed @rocket.chat/fuselage version. Understand the feature intent and user flow.
+- Setup per SKILL.md has run: version pinned, vocabulary resolved live from the installed package — never memory.
+- Understand the feature intent and user flow.
 
 ## Flow
 
@@ -36,7 +37,7 @@ Optionally recommend running polish, harden, migrate, or clarify afterward depen
 After the heuristics scan, write a snapshot:
 
 ```
-node src/audit-snapshot.mjs write --kind critique --slug <feature-slug> --input <findings.json>
+fuselage-snapshot write --kind critique --slug <feature-slug> --input <findings.json>
 ```
 
 Findings envelope:
@@ -60,7 +61,7 @@ Accepted findings live in `.fuselage-craft/critique-ignore.md` (format mirrors `
   reason: accepted — stylistic choice on this surface
 ```
 
-Run `node src/critique-ignore.mjs .` to inspect entries. Suppression is applied before reporting; suppressed count is logged. `reason:` is required per entry — entries without it are skipped with a warning.
+Run `fuselage-snapshot ignore --kind critique --cwd .` to inspect entries. Suppression is applied before reporting; suppressed count is logged. `reason:` is required per entry — entries without it are skipped with a warning.
 
 ## No code, no gate
 
@@ -75,7 +76,7 @@ Resolve the current vocabulary live: `fuselage-resolve components semantic fonts
 Re-run critique after addressing findings.
 
 ```
-node src/audit-snapshot.mjs trend 5 --kind critique --slug <slug>
+fuselage-snapshot trend 5 --kind critique --slug <slug>
 ```
 
 Shows trajectory across the last 5 runs. Report per-category delta to the user; flag any category whose count went up (regression).

@@ -13,7 +13,7 @@ Treat any ambiguity in either as a second STOP. Ask the user; do not guess.
 
 ## Inherit first
 
-- Load the SKILL.md law layer. Confirm the installed @rocket.chat/fuselage version. Resolve every component, prop, and token from the package.
+- Setup per SKILL.md has run: version pinned, vocabulary resolved live from the installed package — never memory.
 
 ## Flow
 
@@ -22,11 +22,8 @@ Treat any ambiguity in either as a second STOP. Ask the user; do not guess.
 2. **Build the component tree.** Use Fuselage components first: Button, Field/FieldLabel/FieldRow/FieldError, Callout, Modal, Tabs, Table, Avatar, Tile, Throbber. Never hand-roll a button, label, error message, or modal. Then Box with semantic props. Never raw HTML.
 
 3. **Apply tokens.** Every design value comes from the installed package as a token name, never a literal hex/px/size:
-   - Colors: `color=` / `bg=` with semantic names (font-default, surface-tint, stroke-light, status-background-danger, etc.).
-   - Spacing: `p` / `m` / `pi` / `pb` / `mi` / `mb` on x* scale only (x4, x8, x12, x16, x24, x32).
-   - Type: `fontScale=` name (h1, h2, h3, h4, h5, p1, p1m, p1b, p2, c1, c2, micro).
-   - Shadows: `elevation=` name (0, 1, 2) not literal `box-shadow`.
-   - Corners: `borderRadius=` name (small, medium, large, extra-large, full) not px.
+   - Colors: `color=` takes the BARE semantic name (`'default'`, `'hint'`, never `'font-default'`); `borderColor=` takes the bare stroke name (`'error'`, never `'stroke-error'`); `bg=` takes the full `surface-*` name or bare (`'surface-tint'` or `'tint'`). Resolve real names live with `fuselage-resolve semantic` — never guess or catalog them here.
+   - Spacing, type, elevation, and border-radius names: resolve via `fuselage-resolve <category>` (`spacing`, `fontscale`, `elevation`, `radius`); the type gate is authoritative for these type-only categories. Illustrative only, not a catalog: `fontScale='h3'`.
 
 4. **Cover all states.** Implement loading (Button `loading`, `Throbber`, or state machine). Implement empty (custom UI with icon and copy, or `Callout`). Implement error (`Callout` or `FieldError` on inputs). Implement disabled (component `disabled` prop). Implement success (check icon, `Callout type='success'`). Nothing silently disappears.
 

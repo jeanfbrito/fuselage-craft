@@ -12,7 +12,7 @@ If either is ambiguous, ask before touching strings. Wrong-register copy is wors
 
 ## Inherit first
 
-- Load the SKILL.md law layer. Confirm the installed @rocket.chat/fuselage version. Identify all user-facing strings in the feature.
+- Setup per SKILL.md has run: version pinned, vocabulary resolved live from the installed package — never memory.
 
 ## Flow
 

@@ -1735,7 +1735,8 @@ export function resolveDiff(oldAll, newAll) {
 export async function main() {
   const args = process.argv.slice(2);
   const jsonMode = args.includes('--json');
-  const categoryArg = args.find((a) => !a.startsWith('--')) || 'all';
+  const nonFlagArgs = args.filter((a) => !a.startsWith('--'));
+  const categoryArg = nonFlagArgs[0] || 'all';
 
   // ── deprecated mode ────────────────────────────────────────────────────────
   if (categoryArg === 'deprecated') {
@@ -1895,16 +1896,22 @@ export async function main() {
   }
 
   if (jsonMode) {
-    const result =
-      categoryArg === 'all'
-        ? await resolveAll()
-        : {
-            root: anchor,
-            resolvedFrom: anchor,
-            fuselageInstalled: fuselageInstalled(),
-            versions: collectVersions(),
-            categories: { [categoryArg]: await resolveCategory(categoryArg) },
-          };
+    let result;
+    if (categoryArg === 'all' && nonFlagArgs.length <= 1) {
+      result = await resolveAll();
+    } else {
+      const categories = {};
+      for (const cat of nonFlagArgs) {
+        categories[cat] = await resolveCategory(cat);
+      }
+      result = {
+        root: anchor,
+        resolvedFrom: anchor,
+        fuselageInstalled: fuselageInstalled(),
+        versions: collectVersions(),
+        categories,
+      };
+    }
     process.stdout.write(JSON.stringify(result, null, 2) + '\n');
     return;
   }
@@ -1931,7 +1938,7 @@ export async function main() {
   }
 
   const cats =
-    categoryArg === 'all'
+    nonFlagArgs.length === 0 || (nonFlagArgs.length === 1 && nonFlagArgs[0] === 'all')
       ? [
           'colors',
           'fontscale',
@@ -1945,7 +1952,7 @@ export async function main() {
           'elevation',
           'radius',
         ]
-      : [categoryArg];
+      : nonFlagArgs;
 
   for (const cat of cats) {
     const result = await resolveCategory(cat);

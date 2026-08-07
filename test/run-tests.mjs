@@ -24,6 +24,7 @@ const suites = [
   './audit-snapshot.test.mjs',
   './ignore-filter.test.mjs',
   './critique-ignore.test.mjs',
+  './command-table-sync.test.mjs',
 ];
 
 let passed = 0;

@@ -7,3 +7,9 @@ fixtures/consumer/node_modules/
 .gitnexus/
 .claude/
 .knowledge/
+
+# Agentic workflow state — never committed
+.localdev/
+
+# macOS
+.DS_Store
