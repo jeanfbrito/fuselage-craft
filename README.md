@@ -37,6 +37,14 @@ So product code references token names (`color='default'`, `p='x16'`, `<Button p
 value resolves inside Fuselage at runtime, and a token change propagates everywhere with no
 consumer edit.
 
+## Evolving the skill
+
+Real-world UI arcs keep finding gaps the gates can't catch. The repeatable
+feedback loop — classify the gap, pick the right layer, honor the
+contribution contract — is itself an agent skill that ships with this repo:
+[`skills/craft-evolve/SKILL.md`](skills/craft-evolve/SKILL.md). Symlink it
+into `~/.claude/skills/` for global discovery.
+
 ## Commands
 
 Invoke as `/fuselage-craft <command> <target>`. Everything after the command is the target;
