@@ -216,6 +216,10 @@ async function testRootReadmeSync() {
   await testReadmeTableSync(ROOT_README_PATH, 'README.md');
 }
 
+// Shared reference docs consulted across commands (not a per-command flow), wired in via
+// SKILL.md directly rather than through command-metadata.json's command→file mapping.
+const SHARED_REFERENCE_FILES = new Set(['semantics.md']);
+
 async function testNoOrphanReferenceFiles() {
   const metadata = await loadMetadataCommands();
   const referencedFiles = new Set(
@@ -226,6 +230,7 @@ async function testNoOrphanReferenceFiles() {
   const mdFiles = files.filter((f) => f.endsWith('.md'));
 
   for (const file of mdFiles) {
+    if (SHARED_REFERENCE_FILES.has(file)) continue;
     if (!referencedFiles.has(file)) {
       throw new Error(
         `adapters/claude-code/reference/${file}: orphan reference file with no corresponding command-metadata.json entry`,
