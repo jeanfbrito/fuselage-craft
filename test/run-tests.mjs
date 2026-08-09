@@ -19,6 +19,7 @@ const suites = [
   './prefer-button.test.mjs',
   './valid-color-token.test.mjs',
   './resolve-diff.test.mjs',
+  './resolve-theme-colors.test.mjs',
   './reconcile-companions.test.mjs',
   './no-deprecated-fuselage-export.test.mjs',
   './audit-snapshot.test.mjs',

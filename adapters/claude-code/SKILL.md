@@ -81,26 +81,27 @@ A change is not done until both pass. Report the version checked, the gate resul
 any drift found.
 
 **Important:** A green gate is NECESSARY, NOT SUFFICIENT. It validates that symbols exist and
-that no literal values were used, but it cannot prove the *preferred*, non-deprecated component
+that no literal values were used, but it cannot prove the _preferred_, non-deprecated component
 was chosen. For component-choice and deprecation questions, consult the installed Fuselage's
 **Storybook and docs** as the source of truth, and run `fuselage-resolve deprecated` (lists
 deprecated exports with their replacements).
 
 ## Laws (the bans)
 
-| Forbidden | Use instead |
-|---|---|
-| Literal hex / rgb in product code | `color=` / `bg=` semantic token name |
-| Literal px spacing / margin / padding | `p` / `m` / `pi` / `pb` on the `x*` scale |
-| `font-size` / `font-weight` / `line-height` | `fontScale=` name |
-| Literal `box-shadow` | `elevation=` name |
-| Literal `border-radius` px | `borderRadius=` scale name |
-| Hand-rolled `<button>` / styled `<div>` button | `<Button primary\|secondary\|danger\|...>` |
-| Hand-wired `<label>` + `<input>` | `<Field>` + `<FieldLabel>` + `<FieldRow>` |
-| Literal media query / breakpoint px | `useBreakpoints` / `useMediaQuery` |
-| Deprecated Fuselage export (e.g. `*Legacy` when the base exists) | the current base component (check the Fuselage Storybook/docs) |
-| Component/prop not in the installed types | nothing - see "When the system lacks it" |
-| State conveyed by color alone | color + weight / icon / text |
+| Forbidden                                                                                   | Use instead                                                             |
+| ------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------- |
+| Literal hex / rgb in product code                                                           | `color=` / `bg=` semantic token name                                    |
+| Literal px spacing / margin / padding                                                       | `p` / `m` / `pi` / `pb` on the `x*` scale                               |
+| `font-size` / `font-weight` / `line-height`                                                 | `fontScale=` name                                                       |
+| Literal `box-shadow`                                                                        | `elevation=` name                                                       |
+| Literal `border-radius` px                                                                  | `borderRadius=` scale name                                              |
+| Hand-rolled `<button>` / styled `<div>` button                                              | `<Button primary\|secondary\|danger\|...>`                              |
+| Hand-wired `<label>` + `<input>`                                                            | `<Field>` + `<FieldLabel>` + `<FieldRow>`                               |
+| Literal media query / breakpoint px                                                         | `useBreakpoints` / `useMediaQuery`                                      |
+| Deprecated Fuselage export (e.g. `*Legacy` when the base exists)                            | the current base component (check the Fuselage Storybook/docs)          |
+| Component/prop not in the installed types                                                   | nothing - see "When the system lacks it"                                |
+| State conveyed by color alone                                                               | color + weight / icon / text                                            |
+| Token that typechecks but is semantically wrong (e.g. `status-background-*` as a solid dot) | consult [`reference/semantics.md`](reference/semantics.md) intent table |
 
 Cross-register bans still apply: no side-stripe borders >1px, no gradient text, no
 decorative glassmorphism.
@@ -121,7 +122,13 @@ hand-roll it in product code.** That is how drift starts. Instead:
    made in the Fuselage repo.
 3. Keep consumer code within the system until the extension lands.
 
-This skill's job is fluent, drift-free *use* of the system, never quiet extension of it.
+If the gap is custom artwork or chrome (progress rings, window-chrome buttons, indicator
+glyphs) rather than a missing component/token, the escape hatch is the custom-chrome recipes
+in [`reference/semantics.md`](reference/semantics.md#when-fuselage-genuinely-lacks-it-custom-chrome-recipes)
+— they keep hand-rolled artwork conformant (token-chain color, theme-proof tracks, motion
+policy) rather than opening the door to arbitrary styling.
+
+This skill's job is fluent, drift-free _use_ of the system, never quiet extension of it.
 
 ## Commands
 
@@ -130,18 +137,18 @@ follow it**; everything after the command name is the target. If the first argum
 no command, treat the whole argument as a general Fuselage-craft request under the laws
 above. Setup (below) runs first either way.
 
-| Command | Category | What it does | Reference |
-|---|---|---|---|
-| `audit` | Evaluate | Flagship. Run gate with snapshot; score 4 dims by density (0–4 each) → P0–P3 severity; report drift with file:line; trend across last 3 snapshots; judgment pass; no edits. | [reference/audit.md](reference/audit.md) |
-| `migrate` | Fix | Convert legacy raw-CSS / hex / hand-rolled UI into Fuselage + token refs; map by role, not value; gate closes | [reference/migrate.md](reference/migrate.md) |
-| `upgrade` | Fix | Hop-by-hop version bump; gate detects breaks; resolver diff maps renames; checkpoint per hop | [reference/upgrade.md](reference/upgrade.md) |
-| `polish` | Refine | Final pre-ship pass: reads audit snapshot (STOP if missing); drains P0 backlog; re-runs gate + reads trend; code hygiene; visual rhythm. | [reference/polish.md](reference/polish.md) |
-| `harden` | Refine | Production-readiness: edge cases, i18n, RTL, logical spacing, input validation, performance resilience, a11y — all through Fuselage; handoff to polish. | [reference/harden.md](reference/harden.md) |
-| `critique` | Evaluate | UX heuristic review: hierarchy, cognitive load, IA, affordances, a11y. HIGH/MED/LOW scored findings. Snapshot + suppression + trend. No code, no gate. | [reference/critique.md](reference/critique.md) |
-| `clarify` | Fix | Fix UX copy: labels, button text, errors, helper text, empty states. STOP to confirm audience + mental state; NEVER list enforced; handoff to polish on green. | [reference/clarify.md](reference/clarify.md) |
-| `adapt` | Fix | Replace literal media queries with `useBreakpoints`/`useMediaQuery`; source-context audit; logical spacing; honors `usePrefersReducedMotion`; handoff to polish. | [reference/adapt.md](reference/adapt.md) |
-| `shape` | Build | Discovery interview (≥1 Q-round, STOP if ambiguous) + Fuselage composition tree + token/state plan. STOP after output — no product code. | [reference/shape.md](reference/shape.md) |
-| `craft` | Build | Shape-confirm ≠ code-green (second STOP for token/state plan); build with Fuselage only — NEVER hand-roll; all states; gate closes; visual loop; user summary. | [reference/craft.md](reference/craft.md) |
+| Command    | Category | What it does                                                                                                                                                                | Reference                                      |
+| ---------- | -------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------- |
+| `audit`    | Evaluate | Flagship. Run gate with snapshot; score 4 dims by density (0–4 each) → P0–P3 severity; report drift with file:line; trend across last 3 snapshots; judgment pass; no edits. | [reference/audit.md](reference/audit.md)       |
+| `migrate`  | Fix      | Convert legacy raw-CSS / hex / hand-rolled UI into Fuselage + token refs; map by role, not value; gate closes                                                               | [reference/migrate.md](reference/migrate.md)   |
+| `upgrade`  | Fix      | Hop-by-hop version bump; gate detects breaks; resolver diff maps renames; checkpoint per hop                                                                                | [reference/upgrade.md](reference/upgrade.md)   |
+| `polish`   | Refine   | Final pre-ship pass: reads audit snapshot (STOP if missing); drains P0 backlog; re-runs gate + reads trend; code hygiene; visual rhythm.                                    | [reference/polish.md](reference/polish.md)     |
+| `harden`   | Refine   | Production-readiness: edge cases, i18n, RTL, logical spacing, input validation, performance resilience, a11y — all through Fuselage; handoff to polish.                     | [reference/harden.md](reference/harden.md)     |
+| `critique` | Evaluate | UX heuristic review: hierarchy, cognitive load, IA, affordances, a11y. HIGH/MED/LOW scored findings. Snapshot + suppression + trend. No code, no gate.                      | [reference/critique.md](reference/critique.md) |
+| `clarify`  | Fix      | Fix UX copy: labels, button text, errors, helper text, empty states. STOP to confirm audience + mental state; NEVER list enforced; handoff to polish on green.              | [reference/clarify.md](reference/clarify.md)   |
+| `adapt`    | Fix      | Replace literal media queries with `useBreakpoints`/`useMediaQuery`; source-context audit; logical spacing; honors `usePrefersReducedMotion`; handoff to polish.            | [reference/adapt.md](reference/adapt.md)       |
+| `shape`    | Build    | Discovery interview (≥1 Q-round, STOP if ambiguous) + Fuselage composition tree + token/state plan. STOP after output — no product code.                                    | [reference/shape.md](reference/shape.md)       |
+| `craft`    | Build    | Shape-confirm ≠ code-green (second STOP for token/state plan); build with Fuselage only — NEVER hand-roll; all states; gate closes; visual loop; user summary.              | [reference/craft.md](reference/craft.md)       |
 
 ## Setup (every command, before work)
 
@@ -159,5 +166,10 @@ above. Setup (below) runs first either way.
    The resolver is cwd-anchored — run it from the consumer repo root so it resolves the
    correct installed packages.
 4. Resolve the specific components / props / tokens the task touches from the package.
-5. Do the work under the laws above. Close with the gate:
+5. Read [`reference/semantics.md`](reference/semantics.md) before any token/color/motion
+   decision. The gates prove a token name exists and no literal snuck in — they cannot prove
+   the token means what you think it means. `semantics.md` is the semantic layer the gates
+   can't enforce: intent-to-token-family mapping, motion policy, component gotchas, and
+   custom-chrome recipes.
+6. Do the work under the laws above. Close with the gate:
    `fuselage-gate <globs>` (or `node <toolkit>/bin/fuselage-gate.mjs <globs>`).

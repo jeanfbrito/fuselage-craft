@@ -384,6 +384,25 @@ async function importPkgData(pkg, files) {
   return null;
 }
 
+/**
+ * Read a `.json` data file shipped by a package under the consumer's node_modules.
+ * Plain JSON has no default-export ambiguity, so this reads + JSON.parses directly
+ * rather than dynamic-importing (avoids relying on import-assertion/attribute syntax,
+ * which is Node-version-sensitive).
+ * Returns { value, source } or null.
+ */
+function readPkgJson(pkg, relPath) {
+  try {
+    const pkgDir = dirname(anchorRequire.resolve(`${pkg}/package.json`));
+    const abs = join(pkgDir, relPath);
+    if (!existsSync(abs)) return null;
+    const value = JSON.parse(readFileSync(abs, 'utf8'));
+    return { value, source: 'node_modules (theme data)' };
+  } catch {
+    return null;
+  }
+}
+
 // ─── Category resolvers ───────────────────────────────────────────────────────
 
 async function resolveColors() {
@@ -627,6 +646,140 @@ async function resolveSemantic() {
     };
   } catch (err) {
     return { status: 'unavailable', reason: `semantic resolver error: ${err.message}`, data: {} };
+  }
+}
+
+/**
+ * Per-theme color values: read the resolved (post-cascade) hex/rgba values that
+ * `@rocket.chat/fuselage-tokens` ships per theme, so a semantic token name can be
+ * checked against what it actually renders as in each theme — not just that the
+ * name exists (the `semantic` category proves existence; this proves value).
+ *
+ * Source: `@rocket.chat/fuselage-tokens/dist/<group>.json`, shaped
+ * `{ <groupKey>: { light: {...}, 'high-contrast': {...}, dark: {...} } }`.
+ * This is the SAME package the runtime's PaletteStyleTag injects from — resolved
+ * live from the installed package, never hardcoded here.
+ *
+ * Each theme file's keys are camelCase (or, for `status`, unprefixed) rather than
+ * the kebab-case bare names the `semantic` category emits, so this normalizes keys
+ * to kebab-case and reconstructs the group-specific prefix (`status-background-`,
+ * `status-font-on-`, `shadow-`) before matching against the `semantic` bare names.
+ */
+const THEME_GROUP_META = {
+  surface: { file: 'surface.json', dataKey: 'surface', prefix: '' },
+  text: { file: 'font.json', dataKey: 'font', prefix: '' },
+  stroke: { file: 'stroke.json', dataKey: 'stroke', prefix: '' },
+  status: { file: 'status.json', dataKey: 'status', prefix: 'status-background-' },
+  statusColor: { file: 'status.json', dataKey: 'status', prefix: 'status-font-on-' },
+  badge: { file: 'badge.json', dataKey: 'badge', prefix: 'badge-background-' },
+  shadow: { file: 'shadow.json', dataKey: 'shadow', prefix: 'shadow-' },
+};
+
+/**
+ * camelCase → kebab-case (e.g. "extraLight" → "extra-light").
+ */
+function camelToKebab(s) {
+  return s.replace(/([a-z0-9])([A-Z])/g, '$1-$2').toLowerCase();
+}
+
+/**
+ * The `status.json` theme file stores TWO logically distinct groups (background
+ * fills and on-color text) under one flat object, distinguished only by a
+ * `font-on-` prefix already present on half the keys. Reconstructing the
+ * `status`/`statusColor` bare name requires first stripping that raw `font-on-`
+ * marker (present in the JSON) before re-adding the semantic category's own
+ * `status-font-on-`/`status-background-` prefix.
+ */
+function themeKeyToBareName(rawKey, groupName) {
+  const kebab = camelToKebab(rawKey);
+  if (groupName === 'statusColor') {
+    return kebab.startsWith('font-on-') ? kebab.slice('font-on-'.length) : null;
+  }
+  if (groupName === 'status') {
+    return kebab.startsWith('font-on-') ? null : kebab;
+  }
+  return kebab;
+}
+
+async function resolveThemeColors() {
+  try {
+    const semanticResult = await resolveSemantic();
+    if (semanticResult.status !== 'ok' || !Array.isArray(semanticResult.data)) {
+      return {
+        status: 'unavailable',
+        reason: `semantic category unavailable (${semanticResult.status}); theme-colors depends on it`,
+        data: [],
+      };
+    }
+
+    const themes = ['light', 'dark'];
+    const results = [];
+    const unresolvedGroups = [];
+
+    for (const group of semanticResult.data) {
+      const { groupName, keys } = group;
+      const meta = THEME_GROUP_META[groupName];
+      if (!meta || !Array.isArray(keys)) continue; // no theme-data mapping for this group
+
+      const hit = readPkgJson('@rocket.chat/fuselage-tokens', join('dist', meta.file));
+      if (!hit) {
+        unresolvedGroups.push(groupName);
+        continue;
+      }
+      const byTheme = hit.value?.[meta.dataKey];
+      if (!byTheme || typeof byTheme !== 'object') {
+        unresolvedGroups.push(groupName);
+        continue;
+      }
+
+      // Build fullName -> { light, dark } from the raw per-theme objects, keyed by
+      // the SAME full name the `semantic` category's `keys` array already carries
+      // (bare for surface/text/stroke, prefixed for status/statusColor/badge/shadow —
+      // `postProcessSemanticGroups` only strips prefixes for the groups in
+      // SEMANTIC_GROUP_META; the rest pass through with their raw prefixed names).
+      const perThemeMaps = {};
+      for (const theme of themes) {
+        const rawThemeObj = byTheme[theme];
+        perThemeMaps[theme] = {};
+        if (!rawThemeObj || typeof rawThemeObj !== 'object') continue;
+        for (const [rawKey, value] of Object.entries(rawThemeObj)) {
+          const bareName = themeKeyToBareName(rawKey, groupName);
+          if (bareName === null) continue;
+          perThemeMaps[theme][meta.prefix + bareName] = value;
+        }
+      }
+
+      for (const fullName of keys) {
+        const light = perThemeMaps.light[fullName];
+        const dark = perThemeMaps.dark[fullName];
+        if (light === undefined && dark === undefined) continue; // e.g. surface's 'transparent'
+        results.push({ name: fullName, groupName, light: light ?? null, dark: dark ?? null });
+      }
+    }
+
+    if (results.length === 0) {
+      return {
+        status: 'unavailable',
+        reason: unresolvedGroups.length > 0
+          ? `theme data files not found for groups: ${unresolvedGroups.join(', ')}`
+          : 'no theme-color entries resolved',
+        data: [],
+      };
+    }
+
+    results.sort((a, b) => a.name.localeCompare(b.name));
+
+    const result = {
+      status: 'ok',
+      source: '@rocket.chat/fuselage-tokens/dist/*.json (theme data)',
+      data: results,
+    };
+    if (unresolvedGroups.length > 0) {
+      result.warning = `theme data unavailable for groups: ${unresolvedGroups.join(', ')} (name-only in the semantic category)`;
+    }
+    return result;
+  } catch (err) {
+    return { status: 'unavailable', reason: `theme-colors resolver error: ${err.message}`, data: [] };
   }
 }
 
@@ -1553,6 +1706,8 @@ export async function resolveCategory(category) {
       return resolveBreakpoints();
     case 'semantic':
       return resolveSemantic();
+    case 'theme-colors':
+      return resolveThemeColors();
     case 'elevation':
       return resolveElevation();
     case 'components':
@@ -1594,6 +1749,7 @@ export async function resolveAll() {
     'fontscale',
     'breakpoints',
     'semantic',
+    'theme-colors',
     'components',
     'inputs',
     'forms',
@@ -1944,6 +2100,7 @@ export async function main() {
           'fontscale',
           'breakpoints',
           'semantic',
+          'theme-colors',
           'components',
           'inputs',
           'forms',
@@ -1982,6 +2139,14 @@ export async function main() {
         for (const k of keys) {
           process.stdout.write(`    ${k}\n`);
         }
+      }
+    } else if (cat === 'theme-colors' && result.status === 'ok') {
+      // Per-theme resolved values: name, light hex/rgba, dark hex/rgba
+      if (result.warning) {
+        process.stdout.write(`  ${result.warning}\n\n`);
+      }
+      for (const { name, light, dark } of result.data) {
+        process.stdout.write(`  ${name}\n    light: ${light}\n    dark:  ${dark}\n`);
       }
     } else if (Array.isArray(result.data)) {
       for (const name of result.data) {

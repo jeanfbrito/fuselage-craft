@@ -20,9 +20,34 @@ Fuselage vocabulary.
 ```sh
 fuselage-resolve all          # every category (components, tokens, hooks, forms, inputs...)
 fuselage-resolve semantic     # color tokens grouped by prop (color=, bg=, borderColor=)
+fuselage-resolve theme-colors # semantic token names resolved to their light/dark hex values
 fuselage-resolve components
 fuselage-resolve inputs
 ```
+
+### `theme-colors`
+
+Resolves each `semantic` category token name to the actual per-theme value it renders as,
+read from `@rocket.chat/fuselage-tokens/dist/*.json` — the same theme data the runtime's
+`PaletteStyleTag` injects from. `semantic` proves a token name exists; `theme-colors` proves
+what it's worth in each theme, which is what catches a pale badge-background token being
+mistaken for a solid status-dot color (see
+[`adapters/claude-code/reference/semantics.md`](../adapters/claude-code/reference/semantics.md)).
+
+```sh
+fuselage-resolve theme-colors --json
+```
+
+Output shape: `{ name, groupName, light, dark }` per resolved token (`name` matches the full
+name the `semantic` category reports for that group — bare for `surface`/`text`/`stroke`,
+prefixed for `status`/`statusColor`/`badge`/`shadow`). A token with no static per-theme value
+(e.g. `surface`'s `transparent`) is omitted rather than faked. This is a separate category from
+`semantic` — `semantic`'s array shape stays exactly as-is because `valid-color-token` validates
+token NAMES against it; theme value data lives only under `theme-colors`.
+
+The same source files also carry a `high-contrast` theme; this category resolves only
+`light`/`dark` by design (matching the two themes product code is asked to reason about) —
+`high-contrast` values are fully resolvable from the same JSON if a future category needs them.
 
 A category that can't be resolved reports `unavailable` rather than guessing — the type gate
 still enforces correctness, so the failure mode is safe.
@@ -165,6 +190,7 @@ FUSELAGE_CRAFT_SNAPSHOT=1 fuselage-gate 'src/**/*.tsx'
 Output directory: `.fuselage-craft/audit/`
 
 Files written:
+
 - `<ISO>.json` — immutable timestamped snapshot (e.g. `2026-05-28T14:32:10Z.json`), kept indefinitely
 - `latest.json` — copy of the most recent snapshot, overwritten on each run
 
@@ -205,6 +231,7 @@ Files written:
 ```
 
 **Field reference:**
+
 - `version` — schema version (frozen to v1)
 - `timestamp` — ISO 8601 run timestamp
 - `fuselageVersion` — installed `@rocket.chat/fuselage` package version
@@ -261,22 +288,26 @@ fuselage-gate 'src/**/*.tsx' --no-ignore  # skip ignore.md, report all findings
 # .fuselage-craft/ignore.md
 
 ## fuselage-craft-gate/no-raw-color
+
 - path: src/legacy/old-banner.tsx
   line: 42
   reason: pinned surface until v25 upgrade
 
 ## fuselage-craft-gate/prefer-button
-- path: src/legacy/*.tsx
+
+- path: src/legacy/\*.tsx
   reason: full legacy folder; tracked by ticket FOO-123
 ```
 
 **Rules:**
+
 - Section header `## <rule-id>` — one rule per section (e.g. `fuselage-craft-gate/no-raw-color`)
 - `path` — file or glob pattern (`*` matches any single path segment, `**` matches any depth including `/`)
 - `line` — optional line number; if omitted, matches any line in the file
 - `reason` — required; explains why the finding is suppressed. Missing reason → entry skipped + warning to stderr
 
 **Example patterns:**
+
 - `src/legacy/old-banner.tsx` — exact file match
 - `src/legacy/*.tsx` — all `.tsx` files in `src/legacy/` (single depth)
 - `src/legacy/**/*.tsx` — all `.tsx` files in `src/legacy/` and subdirectories
