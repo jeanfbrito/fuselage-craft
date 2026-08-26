@@ -33,6 +33,15 @@ ln -s ~/tools/fuselage-craft/adapters/claude-code ~/.claude/skills/fuselage-craf
 
 Claude Code will automatically discover the skill from `~/.claude/skills/fuselage-craft/SKILL.md`.
 
+This adapter also ships a `fuselage-token-checker` subagent (read-only Fuselage
+token/prop validator for changed `.tsx` files) — symlink it into your Claude Code
+agents directory the same way:
+
+```sh
+mkdir -p ~/.claude/agents
+ln -s ~/tools/fuselage-craft/adapters/claude-code/agents/fuselage-token-checker.md ~/.claude/agents/fuselage-token-checker.md
+```
+
 ## Usage
 
 Invoke from within a product repo that depends on `@rocket.chat/fuselage`:
