@@ -85,10 +85,3 @@ with a mechanically crisp signature.
 4. Commit with a body explaining which real-world failure motivated each
    change (the PR reads as "this bug will never recur"), push, open PR to
    `main`, merge on the user's word.
-
-## Provenance
-
-Born from the Rocket.Chat.Electron downloads-indicator arc (PRs #3441/#3443
-→ fuselage-craft PR #1, Aug 2026): the status-background-as-solid-dot trap,
-the missing motion policy, react-aria label gotchas, and per-theme color
-resolution all passed the gates and cost review rounds before landing here.
